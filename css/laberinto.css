@@ -1,0 +1,119 @@
+/* Reusa las variables de :root definidas en battle.css (colores, mono,
+   sans) — este archivo solo agrega el layout específico del laberinto,
+   no vuelve a declarar la paleta. */
+
+.laberinto-body {
+    align-items: center;
+}
+
+.laberinto-wrap {
+    width: 100%;
+    max-width: 640px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    align-items: stretch;
+}
+
+.paths-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.path-card {
+    background: var(--panel);
+    border: 1px solid #2c313b;
+    border-radius: 6px;
+    padding: 0.75em;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5em;
+    cursor: pointer;
+    text-align: left;
+    font-family: var(--sans);
+    color: var(--text);
+    transition: border-color 0.12s ease, background 0.12s ease, transform 0.12s ease;
+}
+
+.path-card:hover {
+    border-color: var(--amber);
+    background: #232833;
+    transform: translateY(-2px);
+}
+
+.path-card:focus-visible {
+    outline: 2px solid var(--amber);
+    outline-offset: 2px;
+}
+
+.path-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    font-family: var(--mono);
+}
+
+.path-name {
+    font-size: 13px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--amber);
+}
+
+.path-xp {
+    font-size: 11px;
+    color: var(--text-dim);
+}
+
+.path-enemies {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.enemy-chip {
+    display: flex;
+    align-items: center;
+    gap: 0.5em;
+    background: #0f1115;
+    border: 1px solid #2c313b;
+    border-radius: 0.75em;
+    padding: 0 0.5em 0 0;
+    font-size: 14px;
+}
+
+.enemy-chip-icon {
+    width: 68px;
+    height: 68px;
+    object-fit: contain;
+    border-radius: 0.75em;
+}
+
+.enemy-chip.enemy-lobo .enemy-chip-label {
+    color: var(--crimson);
+}
+
+.enemy-chip.enemy-goblin .enemy-chip-label {
+    color: var(--goblin);
+}
+
+.rest-btn {
+    align-self: center;
+    background: var(--teal);
+    color: #0c1a19;
+    border: none;
+    border-radius: 5px;
+    padding: 10px 24px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    font-family: var(--mono);
+    text-transform: uppercase;
+    font-size: 12px;
+}
+
+.rest-btn:hover {
+    filter: brightness(1.1);
+}
+

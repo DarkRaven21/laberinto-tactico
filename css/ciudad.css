@@ -1,0 +1,586 @@
+/* ============================================================
+   Layout general de la pantalla de Ciudad
+   ============================================================ */
+
+.ciudad-page {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 0 32px 40px;
+}
+
+.ciudad-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 22px 0;
+    border-bottom: 1px solid #2c313b;
+    margin-bottom: 28px;
+}
+
+.ciudad-title {
+    margin: 0;
+    font-family: var(--mono);
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: var(--amber);
+    font-size: 22px;
+}
+
+.ciudad-gold {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 16px;
+    background: var(--panel);
+    border: 1px solid #2c313b;
+    border-radius: 8px;
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--amber);
+}
+
+.ciudad-layout {
+    display: flex;
+    align-items: flex-start;
+    gap: 28px;
+}
+
+/* ---------- Sidebar: personaje + navegación ---------- */
+
+.ciudad-sidebar {
+    width: 260px;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.ciudad-character-card {
+    background: var(--panel);
+    border: 1px solid #2c313b;
+    border-radius: 8px;
+    padding: 18px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    justify-content: flex-start;
+}
+
+.ciudad-character-portrait {
+    width: 80px;
+    height: 80px;
+    border-radius: 6px;
+    border: 1px dashed #363c48;
+    background: rgba(0, 0, 0, 0.25);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    flex-shrink: 0;
+    overflow: hidden;
+}
+
+.ciudad-character-portrait img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.ciudad-character-portrait-label {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-dim);
+    letter-spacing: 0.5px;
+}
+
+.ciudad-character-info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+}
+
+.ciudad-character-name {
+    font-family: var(--sans);
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.ciudad-character-level {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--amber);
+    letter-spacing: 0.5px;
+}
+
+.ciudad-nav {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.ciudad-nav-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 13px 16px;
+    background: var(--panel);
+    border: 1px solid #2c313b;
+    border-radius: 6px;
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: border-color 0.12s ease, background 0.12s ease;
+}
+
+.ciudad-nav-btn:hover {
+    border-color: var(--amber);
+    background: #232833;
+}
+
+.ciudad-nav-btn--primary {
+    background: var(--teal);
+    border-color: var(--teal);
+    color: #0c1a19;
+    font-family: var(--mono);
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+}
+
+.ciudad-nav-btn--primary:hover {
+    border-color: var(--teal);
+    filter: brightness(1.08);
+    background: var(--teal);
+}
+
+.ciudad-nav-btn--ghost {
+    margin-top: 4px;
+    background: transparent;
+    border-color: #2c313b;
+    color: var(--text-dim);
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    padding: 9px 12px;
+}
+
+.ciudad-nav-btn--ghost:hover {
+    color: var(--crimson);
+    border-color: var(--crimson);
+    background: transparent;
+}
+
+/* ---------- Main: placeholder + eventos ---------- */
+
+.ciudad-main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    min-height: 420px;
+}
+
+.ciudad-placeholder {
+    flex: 1;
+    border: 1px dashed #262a33;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-dim);
+    font-family: var(--sans);
+    font-size: 13px;
+}
+
+.ciudad-events {
+    border-top: 1px solid #2c313b;
+    padding-top: 18px;
+}
+
+.ciudad-events-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 14px;
+}
+
+.ciudad-events-header h2 {
+    margin: 0;
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+}
+
+.ciudad-events-hint {
+    font-family: var(--sans);
+    font-size: 11px;
+    color: #4b5266;
+}
+
+.ciudad-events-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+}
+
+.ciudad-event-slot {
+    min-height: 110px;
+    border: 1px solid #2c313b;
+    border-radius: 8px;
+    background: var(--panel);
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.ciudad-event-slot-label {
+    font-family: var(--sans);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+}
+
+.ciudad-event-slot-stats {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--teal);
+    flex: 1;
+}
+
+.ciudad-event-slot-price {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--amber);
+}
+
+.ciudad-event-buy-btn {
+    background: var(--teal);
+    color: #0c1a19;
+    border: none;
+    border-radius: 5px;
+    padding: 7px 10px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    font-family: var(--mono);
+    text-transform: uppercase;
+    font-size: 11px;
+}
+
+.ciudad-event-buy-btn:hover:not(:disabled) { filter: brightness(1.1); }
+
+.ciudad-event-buy-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    background: #363c48;
+    color: var(--text-dim);
+}
+
+/* ---------- Responsive: sidebar arriba en pantallas angostas ---------- */
+
+@media (max-width: 760px) {
+    .ciudad-layout {
+        flex-direction: column;
+    }
+    .ciudad-sidebar {
+        width: 100%;
+        flex-direction: row;
+        align-items: stretch;
+    }
+    .ciudad-character-card {
+        flex-shrink: 0;
+    }
+    .ciudad-nav {
+        flex: 1;
+        justify-content: center;
+    }
+    .ciudad-events-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* ---------- Celular: todo en una columna, márgenes y textos más chicos ---------- */
+
+@media (max-width: 600px) {
+    .ciudad-page {
+        padding: 0 0 28px;
+    }
+    .ciudad-header {
+        padding: 6px 0 14px;
+        margin-bottom: 16px;
+    }
+    .ciudad-title {
+        font-size: 16px;
+        letter-spacing: 3px;
+    }
+    .ciudad-gold {
+        padding: 5px 10px;
+        font-size: 12px;
+    }
+    .ciudad-sidebar {
+        flex-direction: column;
+        gap: 12px;
+    }
+    .ciudad-character-card {
+        padding: 12px;
+    }
+    .ciudad-character-portrait {
+        width: 64px;
+        height: 64px;
+    }
+    .ciudad-nav-btn {
+        padding: 11px 14px;
+    }
+    .ciudad-main {
+        min-height: 0;
+        gap: 16px;
+    }
+    .ciudad-placeholder {
+        min-height: 120px;
+    }
+    .ciudad-events-header {
+        flex-direction: column;
+        gap: 4px;
+    }
+    .ciudad-event-slot {
+        min-height: 0;
+    }
+}
+
+/* ============================================================
+   Ayuda: botón "?" del header + popup "Cómo funciona el juego"
+   (ver ciudad-ayuda.js)
+   ============================================================ */
+
+.ciudad-header-right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.ciudad-help-btn {
+    width: 34px;
+    height: 34px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    border: 1px solid #2c313b;
+    background: var(--panel);
+    color: var(--amber);
+    font-family: var(--mono);
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: border-color 0.12s ease, background 0.12s ease;
+}
+
+.ciudad-help-btn:hover {
+    border-color: var(--amber);
+    background: #232833;
+}
+
+.ciudad-help-btn:focus-visible {
+    outline: 2px solid var(--amber);
+    outline-offset: 2px;
+}
+
+.help-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 30;
+    background: rgba(10, 11, 14, 0.82);
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.help-overlay.show {
+    display: flex;
+}
+
+/* Evita que la página de atrás scrollee con el popup abierto */
+body.help-open {
+    overflow: hidden;
+}
+
+.help-dialog {
+    width: 100%;
+    max-width: 580px;
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
+    background: var(--panel);
+    border: 1px solid #3a3f4b;
+    border-radius: 10px;
+    box-shadow: 0 18px 40px rgba(0, 0, 0, 0.55);
+}
+
+.help-dialog-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 16px 20px 12px;
+    border-bottom: 1px solid #2c313b;
+}
+
+.help-dialog-header h2 {
+    margin: 0;
+    font-family: var(--mono);
+    font-size: 15px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--amber);
+}
+
+.help-close-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-dim);
+    font-size: 24px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 2px 6px;
+}
+
+.help-close-btn:hover {
+    color: var(--text);
+}
+
+.help-dialog-body {
+    overflow-y: auto;
+    padding: 6px 20px 10px;
+}
+
+.help-dialog-body h3 {
+    margin: 16px 0 6px;
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--teal);
+}
+
+.help-dialog-body p {
+    margin: 0 0 8px;
+    font-family: var(--sans);
+    font-size: 13.5px;
+    line-height: 1.6;
+    color: var(--text);
+}
+
+.help-dialog-body .help-farewell {
+    margin-top: 14px;
+    font-weight: 600;
+    color: var(--amber);
+}
+
+.help-dialog-footer {
+    display: flex;
+    justify-content: flex-end;
+    padding: 12px 20px 16px;
+    border-top: 1px solid #2c313b;
+}
+
+@media (max-width: 600px) {
+    .help-overlay {
+        padding: 10px;
+    }
+    .help-dialog {
+        max-height: 90vh;
+    }
+    .help-dialog-header,
+    .help-dialog-footer {
+        padding-left: 14px;
+        padding-right: 14px;
+    }
+    .help-dialog-body {
+        padding: 4px 14px 8px;
+    }
+    .help-dialog-body p {
+        font-size: 12.5px;
+    }
+    .ciudad-help-btn {
+        width: 30px;
+        height: 30px;
+        font-size: 14px;
+    }
+}
+
+/* ============================================================
+   Aviso del impuesto (barra lateral, ver renderTaxNotice)
+   ============================================================ */
+
+.ciudad-tax-card {
+    background: var(--panel);
+    border: 1px solid #2c313b;
+    border-radius: 8px;
+    padding: 12px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.ciudad-tax-card:empty {
+    display: none;
+}
+
+.ciudad-tax-card--pending {
+    border-color: var(--crimson);
+}
+
+.ciudad-tax-card .tax-title {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+}
+
+.ciudad-tax-card--pending .tax-title {
+    color: var(--crimson);
+}
+
+.ciudad-tax-card .tax-amount {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-family: var(--mono);
+    font-size: 18px;
+    color: var(--amber);
+}
+
+.ciudad-tax-card .tax-when {
+    font-family: var(--sans);
+    font-size: 12px;
+    color: var(--text-dim);
+    line-height: 1.4;
+}
+
+.ciudad-tax-card .tax-status {
+    margin-top: 4px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-family: var(--mono);
+    font-size: 11px;
+}
+
+.tax-status--ok {
+    color: var(--teal);
+}
+
+.tax-status--short {
+    color: var(--crimson);
+}

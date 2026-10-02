@@ -1,0 +1,327 @@
+    /* Reusa las variables de :root definidas en battle.css (colores, mono,
+    sans) — este archivo solo agrega el layout específico del laberinto,
+    no vuelve a declarar la paleta.
+
+    Variante "mapa disperso": en vez de una columna, .paths-list pasa a
+    ser un lienzo (position: relative, alto fijo) y cada .path-card se
+    ancla con position: absolute a un punto propio (nth-child), con una
+    leve rotación para que no se sientan alineados a una grilla. Como la
+    cantidad de caminos es dinámica (1 a 5), hay una posición pensada
+    para cada uno de los 5 slots posibles. */
+
+    .laberinto-body {
+        align-items: center;
+    }
+
+    .laberinto-wrap {
+        width: 100%;
+        max-width: 900px;
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+        align-items: stretch;
+    }
+
+    .paths-list {
+        position: relative;
+        width: 100%;
+        min-height: 560px;
+        /* Textura de puntitos de fondo, para que se sienta "mapa" y no un
+        lienzo vacío — no dibuja un camino real entre los nodos, es
+        ambiente nomás. */
+        background-image: radial-gradient(circle, #2c313b 1.5px, transparent 1.5px);
+        background-size: 26px 26px;
+        border: 1px solid #2c313b;
+        border-radius: 8px;
+    }
+
+    .path-card {
+        position: absolute;
+        width: 230px;
+        background: var(--panel);
+        border: 1px solid #2c313b;
+        border-radius: 6px;
+        padding: 0.75em;
+        display: flex;
+        flex-direction: column;
+        gap: 0.5em;
+        cursor: pointer;
+        text-align: left;
+        font-family: var(--sans);
+        color: var(--text);
+        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35);
+        transition: border-color 0.12s ease, background 0.12s ease,
+            transform 0.15s ease, box-shadow 0.15s ease, z-index 0s;
+    }
+
+    /* Un punto + rotación distinta por slot, para que no se sientan en
+    grilla. Los porcentajes son relativos a .paths-list (min-height
+    560px) — si agregás un 6º camino posible a futuro, este selector
+    necesita una nueva regla nth-child(6). */
+    .path-card:nth-child(1) { top: 6%;  left: 4%;  transform: rotate(-4deg); }
+    .path-card:nth-child(2) { top: 9%; left: 38%; transform: rotate(1deg); }
+    .path-card:nth-child(3) { top: -1%;  left: 71%; transform: rotate(4deg); }
+    .path-card:nth-child(4) { top: 75%; left: 6%; transform: rotate(3deg); }
+    .path-card:nth-child(5) { top: 64%; left: 71%; transform: rotate(-3deg); }
+
+    .path-card:hover {
+        border-color: var(--amber);
+        background: #232833;
+        transform: translateY(-4px) rotate(0deg) scale(1.03);
+        box-shadow: 0 10px 22px rgba(0, 0, 0, 0.5);
+        z-index: 2;
+    }
+
+    .path-card:focus-visible {
+        outline: 2px solid var(--amber);
+        outline-offset: 2px;
+    }
+
+    .path-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        font-family: var(--mono);
+    }
+
+    .path-name {
+        font-size: 13px;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+        color: var(--amber);
+    }
+
+    .path-xp {
+        font-size: 11px;
+        color: var(--text-dim);
+    }
+
+    .path-enemies {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .enemy-chip {
+        display: flex;
+        align-items: center;
+        gap: 0.5em;
+        background: #0f1115;
+        border: 1px solid #2c313b;
+        border-radius: 0.75em;
+        padding: 0 0.5em 0 0;
+        font-size: 14px;
+    }
+
+    .enemy-chip-icon {
+        width: 68px;
+        height: 68px;
+        object-fit: contain;
+        border-radius: 0.75em;
+    }
+
+    .enemy-chip.enemy-lobo .enemy-chip-label {
+        color: var(--crimson);
+    }
+
+    .enemy-chip.enemy-goblin .enemy-chip-label {
+        color: var(--goblin);
+    }
+
+    .rest-btn {
+        align-self: center;
+        background: var(--teal);
+        color: #0c1a19;
+        border: none;
+        border-radius: 5px;
+        padding: 10px 24px;
+        font-weight: 700;
+        letter-spacing: 0.5px;
+        cursor: pointer;
+        font-family: var(--mono);
+        text-transform: uppercase;
+        font-size: 12px;
+    }
+
+    .rest-btn:hover {
+        filter: brightness(1.1);
+    }
+
+    .path-card-puerta {
+        border-color: var(--teal);
+        background: #17302e;
+    }
+    .path-card-puerta:hover {
+        border-color: var(--teal);
+        background: #1f3d3a;
+    }
+    .puerta-hint {
+        font-family: var(--mono);
+        font-size: 22px;
+        color: var(--teal);
+        opacity: 0.7;
+    }
+
+    #laberintoClosedOverlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(10, 11, 14, 0.9);
+        color: #e7e4dc;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 16px;
+        text-align: center;
+        z-index: 20;
+        font-family: system-ui, sans-serif;
+    }
+    #laberintoClosedOverlay.show { display: flex; }
+
+    #laberintoClosedOverlay h2 {
+        font-family: var(--mono);
+        letter-spacing: 3px;
+        text-transform: uppercase;
+        font-size: 28px;
+        color: var(--amber);
+        margin: 0;
+    }
+
+    #laberintoClosedOverlay p {
+        font-family: var(--sans);
+        color: var(--text-dim);
+        margin: 0;
+    }
+
+    .unit-card {
+        background: var(--panel);
+        border: 1px solid #2c313b;
+        border-radius: 6px;
+        padding: 12px 14px;
+        position: fixed;
+        left: 1em;
+        width: 15em;
+    }
+
+    /* Descansar dentro de la tarjeta del jugador: solo en celular. */
+    .rest-btn--card {
+        display: none;
+    }
+
+    /* Línea de nombres de enemigos: solo para celular (ver abajo). */
+    .path-names {
+        display: none;
+    }
+
+    /* ---- Celular / pantallas angostas: el MISMO mapa disperso, achicado.
+    Tarjetas al 44% del ancho en zigzag (dos arriba, una al centro, dos
+    abajo), enemigos solo como ícono y sus nombres en una línea debajo.
+    Las posiciones de computadora (arriba) no se tocan. ---- */
+    @media (max-width: 700px) {
+        .laberinto-body .subtitle {
+            margin-bottom: 6px;
+        }
+
+        .paths-list {
+            min-height: 540px;
+            background-size: 22px 22px;
+        }
+
+        .path-card {
+            width: 44%;
+            padding: 9px;
+            gap: 7px;
+            box-shadow: 0 6px 14px rgba(0, 0, 0, 0.4);
+        }
+
+        .path-card:nth-child(1) { top: 2%;  left: 3%;  transform: rotate(-4deg); }
+        .path-card:nth-child(2) { top: 7%;  left: 52%; transform: rotate(2deg); }
+        .path-card:nth-child(3) { top: 36%; left: 27%; transform: rotate(-1deg); }
+        .path-card:nth-child(4) { top: 67%; left: 3%;  transform: rotate(3deg); }
+        .path-card:nth-child(5) { top: 71%; left: 53%; transform: rotate(-3deg); }
+
+        .path-name {
+            font-size: 11px;
+        }
+
+        .path-xp {
+            font-size: 9.5px;
+        }
+
+        .path-enemies {
+            gap: 5px;
+        }
+
+        .enemy-chip {
+            padding: 0;
+            border-radius: 8px;
+        }
+
+        .enemy-chip-icon {
+            width: 34px;
+            height: 34px;
+            border-radius: 8px;
+        }
+
+        .enemy-chip-label {
+            display: none;
+        }
+
+        .path-names {
+            display: block;
+            font-family: var(--sans);
+            font-size: 9.5px;
+            line-height: 1.3;
+            color: var(--text-dim);
+        }
+
+        .puerta-hint {
+            font-size: 18px;
+        }
+
+        /* Tarjeta del jugador: deja de estar fija a la izquierda (taparía
+        el mapa) y pasa a una fila arriba: HP con barra y oro. */
+        .unit-card {
+            position: static;
+            width: 100%;
+            max-width: 900px;
+            margin: 4px 0 6px;
+            padding: 9px 12px;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .unit-card h3 {
+            display: none;
+        }
+
+        .unit-card .bar-row {
+            margin: 0;
+        }
+
+        .unit-card .bar-row:first-of-type {
+            flex: 1;
+        }
+
+        /* Descansar sube a la fila de la vida; el de abajo se oculta */
+        .rest-btn--card {
+            display: block;
+            flex-shrink: 0;
+            padding: 8px 12px;
+            font-size: 11px;
+        }
+
+        #restBtn {
+            display: none;
+        }
+
+        #laberintoClosedOverlay {
+            padding: 0 20px;
+        }
+
+        #laberintoClosedOverlay h2 {
+            font-size: 20px;
+            letter-spacing: 2px;
+        }
+    }

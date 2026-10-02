@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Ciudad — Combate Táctico</title>
+  <link rel="stylesheet" href="css/battle.css?ver=2026.10.02a">
+  <link rel="stylesheet" href="css/laberinto.css?ver=2026.10.02a">
+  <link rel="stylesheet" href="css/ciudad.css?ver=2026.10.02a">
+  <script type="module" src="js/ciudad.js?ver=2026.10.02a"></script>
+  <script type="module" src="js/ciudad-ayuda.js?ver=2026.10.02a"></script>
+</head>
+<body class="laberinto-body">
+  <div class="ciudad-page">
+
+    <header class="ciudad-header">
+      <h1 class="ciudad-title">Ciudad</h1>
+      <div class="ciudad-header-right">
+        <div class="ciudad-gold" id="goldLabel">Oro: 0 <svg class="lucide-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="8" r="6"/><path d="M18.09 10.37A6 6 0 1 1 10.34 18"/><path d="M7 6h1v4"/><path d="m16.71 13.88.7.71-2.82 2.82"/></svg></div>
+        <button type="button" class="ciudad-help-btn" id="helpBtn" aria-label="Cómo funciona el juego" title="Cómo funciona el juego">?</button>
+      </div>
+    </header>
+
+    <div class="ciudad-layout">
+
+      <aside class="ciudad-sidebar">
+        <div class="ciudad-character-card">
+          <div class="ciudad-character-portrait" id="characterPortrait">
+            <span class="ciudad-character-portrait-label">Personaje</span>
+          </div>
+          <div class="ciudad-character-info">
+            <span class="ciudad-character-name" id="characterName"></span>
+            <span class="ciudad-character-level" id="characterLevel"></span>
+          </div>
+        </div>
+
+        <!-- Aviso del impuesto: lo completa renderTaxNotice() en ciudad.js -->
+        <div class="ciudad-tax-card" id="taxNotice"></div>
+
+        <nav class="ciudad-nav">
+          <button type="button" class="ciudad-nav-btn" id="goToArmeriaBtn">Armería</button>
+          <button type="button" class="ciudad-nav-btn ciudad-nav-btn--primary" id="goToLaberintoBtn">Ir al laberinto</button>
+          <button type="button" class="ciudad-nav-btn ciudad-nav-btn--ghost" id="logoutBtn">Cerrar sesión</button>
+        </nav>
+      </aside>
+
+      <main class="ciudad-main">
+        <div class="ciudad-placeholder">— acá va el resto de la ciudad —</div>
+
+        <section class="ciudad-events">
+          <div class="ciudad-events-header">
+            <h2>Eventos</h2>
+            <span class="ciudad-events-hint">cambian cada vez que volvés a la ciudad</span>
+          </div>
+          <div class="ciudad-events-grid" id="eventsGrid">
+            <div class="ciudad-event-slot">
+              <span class="ciudad-event-slot-label">Evento 1</span>
+              <span class="ciudad-event-slot-status">Próximamente</span>
+            </div>
+            <div class="ciudad-event-slot">
+              <span class="ciudad-event-slot-label">Evento 2</span>
+              <span class="ciudad-event-slot-status">Próximamente</span>
+            </div>
+            <div class="ciudad-event-slot">
+              <span class="ciudad-event-slot-label">Evento 3</span>
+              <span class="ciudad-event-slot-status">Próximamente</span>
+            </div>
+          </div>
+        </section>
+      </main>
+
+    </div>
+  </div>
+
+  <!-- Ayuda: se abre sola la primera vez que el personaje entra a la
+       ciudad, y después con el botón "?" del header (ver ciudad-ayuda.js). -->
+  <div class="help-overlay" id="helpOverlay">
+    <div class="help-dialog" role="dialog" aria-modal="true" aria-labelledby="helpTitle">
+      <div class="help-dialog-header">
+        <h2 id="helpTitle">Cómo funciona el juego</h2>
+        <button type="button" class="help-close-btn" id="helpCloseBtn" aria-label="Cerrar">×</button>
+      </div>
+
+      <div class="help-dialog-body">
+        <h3>El impuesto</h3>
+        <p>El laberinto se abre una vez por mes y es el único lugar donde vas a poder conseguir el oro necesario para pagar el impuesto semestral.</p>
+        <p>El primer impuesto es de 50 monedas de oro, y cada semestre va a ser más alto. Si no tenés el oro para esa fecha, tu personaje va a ser decapitado.</p>
+
+        <h3>La vida en la ciudad</h3>
+        <p>Mientras estés fuera del laberinto vas a tener que encontrar dónde comer y dónde dormir, salvo que prefieras dormir en la calle y mendigar comida. Todo tiene un costo, así que tenelo en cuenta al planear tus excursiones al laberinto. Un explorador bien alimentado rinde más que uno que vive de migajas.</p>
+        <p>En la ciudad también vas a poder visitar la armería y participar en distintos eventos. Son las maneras más sencillas de mejorar tus estadísticas pero, como todo en la vida, cuestan oro.</p>
+
+        <h3>Las almas</h3>
+        <p>La otra manera de mejorar tus estadísticas es consumir almas, que se consiguen matando monstruos en el laberinto. Cada monstruo tiene un 5% de probabilidad de dejar caer su alma. Si conectás con ella, vas a absorber no solo las estadísticas de la criatura, sino también sus habilidades.</p>
+        <p>La cantidad de almas que podés tener al mismo tiempo depende de tu nivel. Si ya llegaste al máximo, no vas a poder consumir una nueva hasta subir de nivel.</p>
+
+        <h3>El laberinto</h3>
+        <p>Explorá con cuidado: las criaturas son duras y peligrosas. Si ningún camino te convence, podés descansar y esperar a que las criaturas migren a otra parte. Pero solo tenés 24 horas para explorar, y cada descanso consume 2.</p>
+        <p>Si encontrás la puerta al nivel 2, te conviene saber que en los niveles más profundos el tiempo pasa distinto: al entrar, tus horas de exploración se reinician y volvés a tener 24.</p>
+        <p>Tené cuidado al avanzar: las criaturas del nivel 2 son muchísimo más peligrosas que las del nivel 1.</p>
+
+        <h3>La experiencia</h3>
+        <p>Cada criatura te da experiencia una sola vez: la primera vez que la matás. Para subir de nivel vas a tener que vencer a distintos tipos de criaturas, así que tenelo en cuenta cuando explores.</p>
+
+        <h3>Los bandidos</h3>
+        <p>Cuidado con los bandidos: son otros jugadores que también recorren el laberinto. Si te cruzás con ellos, podés matarlos para quedarte con su oro, pero no te van a dar experiencia ni vas a poder conectar con sus almas.</p>
+
+        <p class="help-farewell">¡Suerte!</p>
+      </div>
+
+      <div class="help-dialog-footer">
+        <button type="button" class="ciudad-nav-btn ciudad-nav-btn--primary" id="helpOkBtn">Entendido</button>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

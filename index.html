@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Entrar — Combate Táctico</title>
+  <link rel="stylesheet" href="css/battle.css?ver=2026.10.01i">
+  <link rel="stylesheet" href="css/login.css?ver=2026.10.01i">
+  <script type="module" src="js/login.js?ver=2026.10.01i"></script>
+</head>
+
+<body class="laberinto-body login-body">
+
+  <h1>Combate Táctico</h1>
+  <div class="subtitle">creá tu personaje o entrá con uno existente</div>
+
+  <div class="login-wrap">
+    <div class="login-tabs">
+      <button class="login-tab active" id="tabCreate" type="button">Crear personaje</button>
+      <button class="login-tab" id="tabLogin" type="button">Entrar</button>
+    </div>
+
+    <div class="login-form active" id="formCreate">
+      <input id="c-name" placeholder="Nombre" autocomplete="username" autocapitalize="off" autocorrect="off" spellcheck="false">
+      <input id="c-age" placeholder="Edad" type="number" inputmode="numeric">
+      <select id="c-gender">
+        <option value="" disabled selected>Género</option>
+        <option value="male">Masculino</option>
+        <option value="female">Femenino</option>
+      </select>
+      <input id="c-password" placeholder="Contraseña" type="password" autocomplete="new-password">
+      <select id="c-class"></select>
+      <button class="login-submit" id="createBtn" type="button">Crear</button>
+    </div>
+
+    <div class="login-form" id="formLogin">
+      <input id="l-name" placeholder="Nombre" autocomplete="username" autocapitalize="off" autocorrect="off" spellcheck="false">
+      <input id="l-password" placeholder="Contraseña" type="password" autocomplete="current-password">
+      <button class="login-submit" id="loginBtn" type="button">Entrar</button>
+    </div>
+
+    <div class="login-error" id="loginError"></div>
+  </div>
+
+</body>
+
+</html>

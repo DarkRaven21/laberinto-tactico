@@ -1,0 +1,126 @@
+.login-body {
+    align-items: center;
+}
+
+.login-wrap {
+    width: 100%;
+    max-width: 380px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.login-tabs {
+    display: flex;
+    gap: 4px;
+}
+
+.login-tab {
+    flex: 1;
+    background: var(--panel);
+    border: 1px solid #2c313b;
+    color: var(--text-dim);
+    padding: 10px;
+    cursor: pointer;
+    font-family: var(--mono);
+    text-transform: uppercase;
+    font-size: 12px;
+    letter-spacing: 1px;
+    border-radius: 5px;
+}
+
+.login-tab.active {
+    color: var(--amber);
+    border-color: var(--amber);
+}
+
+.login-form {
+    background: var(--panel);
+    border: 1px solid #2c313b;
+    border-radius: 6px;
+    padding: 20px;
+    display: none;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.login-form.active {
+    display: flex;
+}
+
+.login-form input,
+.login-form select {
+    background: #0f1115;
+    border: 1px solid #2c313b;
+    border-radius: 4px;
+    color: var(--text);
+    padding: 8px 10px;
+    font-family: var(--sans);
+    font-size: 13px;
+}
+
+.login-submit {
+    background: var(--amber);
+    color: #1c1712;
+    border: none;
+    border-radius: 5px;
+    padding: 10px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    font-family: var(--mono);
+    text-transform: uppercase;
+    font-size: 12px;
+    margin-top: 6px;
+}
+
+.login-submit:hover {
+    filter: brightness(1.1);
+}
+
+.login-error {
+    color: var(--crimson);
+    font-family: var(--mono);
+    font-size: 12px;
+    min-height: 16px;
+}
+
+/* ---------- Celular ---------- */
+@media (max-width: 600px) {
+    .login-body .subtitle {
+        margin-bottom: 18px;
+        text-align: center;
+        padding: 0 8px;
+    }
+
+    .login-wrap {
+        gap: 14px;
+    }
+
+    .login-tab {
+        padding: 12px 8px;
+        font-size: 11px;
+    }
+
+    .login-form {
+        padding: 16px;
+        gap: 12px;
+    }
+
+    /* 16px: por debajo de eso, el iPhone hace zoom solo al tocar el
+       campo y la pantalla queda corrida. */
+    .login-form input,
+    .login-form select {
+        font-size: 16px;
+        padding: 11px 12px;
+    }
+
+    .login-submit {
+        padding: 13px;
+        font-size: 13px;
+    }
+
+    .login-error {
+        text-align: center;
+    }
+}

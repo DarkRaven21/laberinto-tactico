@@ -1,0 +1,1222 @@
+@import url('https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700&display=swap');
+
+:root {
+    --bg: #14171c;
+    --panel: #1c2028;
+    --grid-inactive: #23262e;
+    --grid-active: #343b47;
+    --grid-active-border: #454e5e;
+    --grid-hover: #4a5568;
+    --amber: #c99a4a;
+    --teal: #4aa7a2;
+    --crimson: #b3503f;
+    --goblin: #8aa563;
+    --text: #e7e4dc;
+    --text-dim: #8b8f98;
+    --mono: 'Lexend', 'Segoe UI', system-ui, sans-serif;
+    --sans: 'Lexend', 'Segoe UI', system-ui, sans-serif;
+    /* Lado de una casilla: 92px en computadora; en pantallas angostas se
+       achica para que las 8 columnas entren en el ancho (ver @media al
+       final). Todo lo que vive dentro de la casilla se mide desde acá. */
+    --cell: min(92px, calc((100vw - 80px) / 8));
+}
+
+* {
+    box-sizing: border-box;
+    font-variant-numeric: tabular-nums;
+}
+
+body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 24px 12px 60px;
+}
+
+h1 {
+    font-family: var(--mono);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    font-size: 20px;
+    color: var(--amber);
+    margin: 0 0 4px;
+}
+
+/* Íconos sueltos de Lucide (ver icons.js) embebidos como SVG inline
+   junto a texto — sin esto quedan corridos respecto a la línea de base. */
+svg.lucide-icon {
+    display: inline-block;
+    vertical-align: -0.15em;
+    flex-shrink: 0;
+}
+
+.subtitle {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--text-dim);
+    margin-bottom: 24px;
+    letter-spacing: 1px;
+}
+
+.layout {
+    display: flex;
+    gap: 24px;
+    flex-wrap: wrap;
+    justify-content: center;
+    max-width: 100vw;
+}
+
+/* ---- Tablero ---- */
+.board-wrap {
+    background: var(--panel);
+    border: 1px solid #2c313b;
+    border-radius: 6px;
+    padding: 16px;
+}
+
+.board {
+    display: grid;
+    grid-template-columns: repeat(8, var(--cell));
+    grid-template-rows: repeat(8, var(--cell));
+    gap: 3px;
+}
+
+.cell {
+    background: var(--grid-inactive);
+    border-radius: 3px;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    cursor: default;
+    transition: background 0.12s ease;
+}
+
+.cell.active {
+    background: var(--grid-active);
+    border: 1px solid var(--grid-active-border);
+}
+
+.cell.reachable {
+    cursor: pointer;
+    box-shadow: inset 0 0 0 2px var(--teal);
+}
+
+.cell.reachable:hover {
+    background: var(--grid-hover);
+}
+
+.cell.targetable {
+    cursor: crosshair;
+    box-shadow: inset 0 0 0 2px var(--crimson);
+}
+
+.cell.targetable:hover {
+    background: #5a3630;
+}
+
+.cell.aoe-preview {
+    box-shadow: inset 0 0 0 2px #d98c3f, 0 0 8px 1px rgba(217, 140, 63, 0.6);
+}
+
+.cell.player-unit {
+    color: var(--teal);
+}
+
+.cell.enemy-unit.type-goblin {
+    color: var(--goblin);
+}
+
+.cell.enemy-unit.type-lobo {
+    color: var(--crimson);
+}
+
+.cell.enemy-unit.type-goblin-shaman {
+    color: #d98c3f;
+}
+
+/* ---- Fichas de unidad ---- */
+.unit-token {
+    position: relative;
+    z-index: 1;
+    transition: transform 140ms ease-out;
+}
+
+.unit-icon {
+    display: block;
+    width: calc(var(--cell) * 0.74);
+    height: calc(var(--cell) * 0.74);
+    border-radius: 50%;
+    object-fit: cover;
+    background: #1c2028;
+    box-shadow: 0 6px 10px rgba(0, 0, 0, 0.55);
+}
+
+.player-unit .unit-icon {
+    border: 3px solid var(--teal);
+}
+
+.enemy-unit .unit-icon {
+    border: 3px solid var(--crimson);
+}
+
+/* Anillo sobre quien tiene el turno (jugador o el enemigo que está actuando) */
+.turn-ring {
+    position: absolute;
+    inset: -7px;
+    border-radius: 50%;
+    border: 2px solid var(--amber);
+    pointer-events: none;
+    animation: turnPulse 1.8s ease-in-out infinite;
+}
+
+@keyframes turnPulse {
+    0%, 100% { opacity: 0.35; transform: scale(0.96); }
+    50% { opacity: 1; transform: scale(1.04); }
+}
+
+.unit-nameplate {
+    position: absolute;
+    top: 3px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 2;
+    font-family: var(--mono);
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    padding: 1px 6px;
+    border-radius: 3px;
+    background: rgba(12, 14, 12, 0.82);
+    color: #e7a795;
+    white-space: nowrap;
+    pointer-events: none;
+}
+
+/* HP del enemigo dentro del nameplate (reemplaza la lista de arriba) */
+.nameplate-hp {
+    color: var(--text);
+    font-weight: 500;
+    margin-left: 3px;
+}
+
+.unit-hp {
+    position: absolute;
+    left: 10px;
+    right: 10px;
+    bottom: 5px;
+    height: 5px;
+    z-index: 2;
+    border-radius: 3px;
+    background: rgba(10, 12, 10, 0.85);
+    pointer-events: none;
+}
+
+.unit-hp-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.25s ease-out;
+}
+
+.player-unit .unit-hp-fill { background: var(--teal); }
+.enemy-unit .unit-hp-fill { background: var(--crimson); }
+
+/* Arte del bioma dentro de la casilla (árbol, arbusto, pasto) */
+.cell-art {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+}
+
+/* ---- Biomas: lo común a todos ---- */
+.board-wrap[class*="biome-"] {
+    position: relative;
+    overflow: hidden;
+}
+
+/* Capa de luz/niebla por bioma, se mueve muy despacio */
+.board-wrap[class*="biome-"]::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 3;
+    animation: biomeLight 14s ease-in-out infinite alternate;
+}
+
+@keyframes biomeLight {
+    0% { transform: translate(0, 0); }
+    100% { transform: translate(18px, -12px); }
+}
+
+.board-wrap[class*="biome-"] .cell { border: none; }
+
+/* Resaltados sobre el suelo del bioma: tinte en vez de cambiar el fondo */
+.board-wrap[class*="biome-"] .cell.reachable::before,
+.board-wrap[class*="biome-"] .cell.targetable::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 3px;
+    pointer-events: none;
+}
+.board-wrap[class*="biome-"] .cell.reachable::before { background: rgba(74, 167, 162, 0.10); }
+.board-wrap[class*="biome-"] .cell.reachable:hover::before { background: rgba(74, 167, 162, 0.28); }
+.board-wrap[class*="biome-"] .cell.targetable::before { background: rgba(179, 80, 63, 0.10); }
+.board-wrap[class*="biome-"] .cell.targetable:hover::before { background: rgba(179, 80, 63, 0.30); }
+
+/* ---- Bosque ---- */
+.board-wrap.biome-forest {
+    border-color: #2d3b27;
+    background:
+        radial-gradient(ellipse at 20% 15%, #2c4424 0%, transparent 55%),
+        radial-gradient(ellipse at 85% 90%, #243a1e 0%, transparent 50%),
+        #18231a;
+}
+.board-wrap.biome-forest::after {
+    background:
+        radial-gradient(circle at 30% 40%, rgba(255, 236, 170, 0.07) 0, transparent 18%),
+        radial-gradient(circle at 70% 25%, rgba(255, 236, 170, 0.06) 0, transparent 14%),
+        radial-gradient(circle at 55% 75%, rgba(255, 236, 170, 0.05) 0, transparent 16%);
+}
+.biome-forest .cell.active.tone-0 { background: radial-gradient(circle at 35% 30%, #37502c 0, #2c4023 70%); }
+.biome-forest .cell.active.tone-1 { background: radial-gradient(circle at 60% 40%, #344b29 0, #293c21 70%); }
+.biome-forest .cell.active.tone-2 { background: radial-gradient(circle at 45% 65%, #3a532e 0, #2e4225 70%); }
+.biome-forest .cell:not(.active) { background: #1f2c1a; }
+
+/* ---- Cementerio ---- */
+.board-wrap.biome-cemetery {
+    border-color: #34313d;
+    background:
+        radial-gradient(ellipse at 70% 20%, #2e2b38 0%, transparent 60%),
+        radial-gradient(ellipse at 15% 85%, #26242e 0%, transparent 50%),
+        #1a1920;
+}
+/* Niebla baja en vez de luz */
+.board-wrap.biome-cemetery::after {
+    background:
+        radial-gradient(ellipse at 25% 70%, rgba(200, 198, 214, 0.08) 0, transparent 30%),
+        radial-gradient(ellipse at 75% 45%, rgba(200, 198, 214, 0.06) 0, transparent 26%),
+        radial-gradient(ellipse at 50% 90%, rgba(200, 198, 214, 0.07) 0, transparent 32%);
+}
+.biome-cemetery .cell.active.tone-0 { background: radial-gradient(circle at 35% 30%, #3a3742 0, #2b2932 70%); }
+.biome-cemetery .cell.active.tone-1 { background: radial-gradient(circle at 60% 40%, #36333e 0, #28262f 70%); }
+.biome-cemetery .cell.active.tone-2 { background: radial-gradient(circle at 45% 65%, #3d3a46 0, #2d2a34 70%); }
+.biome-cemetery .cell:not(.active) { background: #1f1e25; }
+
+/* ---- Pantano ---- */
+.board-wrap.biome-swamp {
+    border-color: #2a3a33;
+    background:
+        radial-gradient(ellipse at 30% 80%, #243a33 0%, transparent 60%),
+        radial-gradient(ellipse at 80% 15%, #1f302a 0%, transparent 50%),
+        #172019;
+}
+/* Bruma verdosa */
+.board-wrap.biome-swamp::after {
+    background:
+        radial-gradient(ellipse at 30% 35%, rgba(170, 210, 150, 0.06) 0, transparent 26%),
+        radial-gradient(ellipse at 70% 65%, rgba(170, 210, 150, 0.05) 0, transparent 24%);
+}
+.biome-swamp .cell.active.tone-0 { background: radial-gradient(circle at 35% 30%, #34423a 0, #27332c 70%); }
+.biome-swamp .cell.active.tone-1 { background: radial-gradient(circle at 60% 40%, #303d35 0, #243029 70%); }
+.biome-swamp .cell.active.tone-2 { background: radial-gradient(circle at 45% 65%, #374639 0, #2a362d 70%); }
+.biome-swamp .cell:not(.active) { background: #1c2622; }
+
+/* ---- Campamento ---- */
+.board-wrap.biome-camp {
+    border-color: #4a3a2a;
+    background:
+        radial-gradient(ellipse at 25% 20%, #4a3a28 0%, transparent 55%),
+        radial-gradient(ellipse at 80% 85%, #3a2d20 0%, transparent 50%),
+        #241b14;
+}
+/* Luz cálida de fogata */
+.board-wrap.biome-camp::after {
+    background:
+        radial-gradient(circle at 35% 45%, rgba(255, 170, 90, 0.07) 0, transparent 22%),
+        radial-gradient(circle at 70% 30%, rgba(255, 190, 110, 0.05) 0, transparent 18%);
+}
+.biome-camp .cell.active.tone-0 { background: radial-gradient(circle at 35% 30%, #56432f 0, #433427 70%); }
+.biome-camp .cell.active.tone-1 { background: radial-gradient(circle at 60% 40%, #513f2d 0, #3f3125 70%); }
+.biome-camp .cell.active.tone-2 { background: radial-gradient(circle at 45% 65%, #5a4632 0, #46362a 70%); }
+.biome-camp .cell:not(.active) { background: #30261d; }
+
+/* ---- Desierto (familia desert) ---- */
+.board-wrap.biome-desert {
+    border-color: #6b5434;
+    background:
+        radial-gradient(ellipse at 25% 20%, #6e5636 0%, transparent 55%),
+        radial-gradient(ellipse at 80% 85%, #5a4528 0%, transparent 50%),
+        #3a2c1a;
+}
+/* Resplandor de sol, cálido y suave */
+.board-wrap.biome-desert::after {
+    background:
+        radial-gradient(circle at 60% 25%, rgba(255, 225, 160, 0.08) 0, transparent 30%),
+        radial-gradient(circle at 25% 70%, rgba(255, 210, 140, 0.05) 0, transparent 24%);
+}
+.biome-desert .cell.active.tone-0 { background: radial-gradient(circle at 35% 30%, #a98550 0, #8e6d3e 70%); }
+.biome-desert .cell.active.tone-1 { background: radial-gradient(circle at 60% 40%, #a2804c 0, #896a3b 70%); }
+.biome-desert .cell.active.tone-2 { background: radial-gradient(circle at 45% 65%, #ad8a54 0, #937242 70%); }
+.biome-desert .cell:not(.active) { background: #4a3a24; }
+
+@media (prefers-reduced-motion: reduce) {
+    .board-wrap[class*="biome-"]::after,
+    .turn-ring { animation: none; }
+}
+
+@keyframes cellFlash {
+    0% {
+        box-shadow: inset 0 0 0 3px var(--crimson), 0 0 14px 2px rgba(179, 80, 63, 0.85);
+        background: #5a2a22;
+    }
+
+    100% {
+        box-shadow: inset 0 0 0 0 transparent;
+    }
+}
+
+.cell.cell-hit {
+    animation: cellFlash 550ms ease-out;
+}
+
+@keyframes floatUp {
+    0% {
+        transform: translate(-50%, -40%) scale(0.9);
+        opacity: 0;
+    }
+
+    15% {
+        transform: translate(-50%, -55%) scale(1.05);
+        opacity: 1;
+    }
+
+    100% {
+        transform: translate(-50%, -140%) scale(1);
+        opacity: 0;
+    }
+}
+
+.dmg-float {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    font-family: var(--mono);
+    font-weight: 700;
+    font-size: 30px;
+    color: #ff8a75;
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.9);
+    pointer-events: none;
+    animation: floatUp 750ms ease-out forwards;
+    z-index: 5;
+}
+
+@keyframes cellFlashHeal {
+    0% {
+        box-shadow: inset 0 0 0 3px #4caf6d, 0 0 14px 2px rgba(76, 175, 109, 0.85);
+        background: #1f4a30;
+    }
+    100% {
+        box-shadow: inset 0 0 0 0 transparent;
+    }
+}
+
+.cell.cell-heal {
+    animation: cellFlashHeal 550ms ease-out;
+}
+
+.heal-float {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    font-family: var(--mono);
+    font-weight: 700;
+    font-size: 30px;
+    color: #6adf8f;
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.9);
+    pointer-events: none;
+    animation: floatUp 750ms ease-out forwards;
+    z-index: 5;
+}
+
+@keyframes cardCast {
+    0% {
+        transform: translateY(0);
+    }
+
+    30% {
+        transform: translateY(-6px);
+        box-shadow: 0 0 0 2px var(--crimson);
+        border-color: var(--crimson);
+    }
+
+    60% {
+        transform: translateY(2px);
+    }
+
+    100% {
+        transform: translateY(0);
+    }
+}
+
+.card-btn.card-cast {
+    animation: cardCast 280ms ease-in-out;
+}
+
+.defend-badge {
+    position: absolute;
+    top: 2px;
+    right: 3px;
+    font-size: 10px;
+    color: var(--amber);
+}
+
+.dodge-badge {
+    position: absolute;
+    top: 2px;
+    left: 3px;
+    font-size: 10px;
+    color: var(--teal);
+}
+
+.trap-badge {
+    position: absolute;
+    bottom: 2px;
+    left: 3px;
+    font-size: 12px;
+    color: var(--amber);
+    opacity: 0.75;
+}
+
+.unit-icon.command-buffed {
+    outline: 3px solid #ffd700;
+    outline-offset: 2px;
+}
+
+/* ---- Panel lateral ---- */
+.side {
+    width: 300px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.unit-card {
+    background: var(--panel);
+    border: 1px solid #2c313b;
+    border-radius: 6px;
+    padding: 12px 14px;
+}
+
+.unit-card.active-turn {
+    border-color: var(--amber);
+}
+
+.unit-card.enemy.dead {
+    opacity: 0.4;
+}
+
+.enemies {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    min-width: 14em;
+}
+
+.unit-card h3 {
+    margin: 0 0 8px;
+    font-family: var(--mono);
+    font-size: 13px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+
+.unit-card.player h3 {
+    color: var(--teal);
+}
+
+.unit-card.enemy h3 {
+    color: var(--crimson);
+}
+
+.bar-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+    font-family: var(--mono);
+    font-size: 11px;
+}
+
+.bar-track {
+    flex: 1;
+    height: 10px;
+    background: #0f1115;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.bar-fill {
+    height: 100%;
+}
+
+.hp-fill {
+    background: linear-gradient(90deg, #7a4c3a, var(--crimson));
+}
+
+.mv-fill {
+    background: linear-gradient(90deg, #2e6b67, var(--teal));
+}
+
+.ap-fill {
+    background: linear-gradient(90deg, #8a6a2e, var(--amber));
+}
+
+/* Grilla compacta: 2 columnas de cartas cortas (nombre + una línea).
+   El detalle completo va en el tooltip (title) de cada carta. */
+.hand {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.card-btn {
+    position: relative;
+    min-width: 0;
+    background: #232833;
+    border: 1px solid #363c48;
+    border-radius: 5px;
+    color: var(--text);
+    padding: 8px 10px;
+    text-align: left;
+    cursor: pointer;
+    font-family: var(--sans);
+    font-size: 13px;
+    transition: border-color 0.12s ease, background 0.12s ease;
+}
+
+.card-btn:hover:not(:disabled) {
+    border-color: var(--amber);
+    background: #2b313d;
+}
+
+.card-btn.selected {
+    border-color: var(--teal);
+    background: #233030;
+}
+
+.card-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.card-name {
+    font-weight: 600;
+}
+
+.card-meta {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text-dim);
+    display: block;
+    margin-top: 2px;
+}
+
+/* Turnos de cooldown, arriba a la derecha de la carta */
+.card-cd {
+    position: absolute;
+    top: 6px;
+    right: 8px;
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--text);
+}
+
+.card-name {
+    display: block;
+    padding-right: 34px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.end-turn-btn {
+    background: var(--amber);
+    color: #1c1712;
+    border: none;
+    border-radius: 5px;
+    padding: 10px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    font-family: var(--mono);
+    text-transform: uppercase;
+    font-size: 12px;
+}
+
+.end-turn-btn:hover {
+    filter: brightness(1.1);
+}
+
+.end-turn-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.log {
+    background: #0f1115;
+    border: 1px solid #2c313b;
+    border-radius: 6px;
+    padding: 10px 12px;
+    height: 170px;
+    overflow-y: auto;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-dim);
+    line-height: 1.5;
+}
+
+.log .turn-tag {
+    color: var(--amber);
+}
+
+.log .dmg-tag {
+    color: var(--crimson);
+}
+
+.overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(10, 11, 14, 0.85);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 16px;
+    z-index: 10;
+}
+
+.overlay.show {
+    display: flex;
+}
+
+.overlay h2 {
+    font-family: var(--mono);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    font-size: 28px;
+}
+
+.overlay h2.win {
+    color: var(--teal);
+}
+
+.overlay h2.lose {
+    color: var(--crimson);
+}
+
+.restart-btn {
+    background: var(--teal);
+    color: #0c1a19;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 5px;
+    font-family: var(--mono);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    cursor: pointer;
+    font-weight: 700;
+}
+/* ============================================================
+   Efectos de habilidades (ver "Efectos visuales" en battle.js).
+   Un tipo nuevo = su variante .fx-<kind> en bolt, blast y spark.
+   ============================================================ */
+.board-wrap {
+    position: relative;
+}
+
+.fx-layer {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 4;
+}
+
+.fx-origin {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 0;
+    height: 0;
+}
+
+/* ---- Proyectil (lo mueve battle.js con Web Animations) ---- */
+.fx-bolt {
+    position: absolute;
+    z-index: 5;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    pointer-events: none;
+    transform: translate(-50%, -50%);
+}
+/* Colores de cada efecto. Los usan el proyectil, el charco y las gotas;
+   se heredan, así que alcanza con que la clase esté en un contenedor.
+   Un efecto nuevo = una línea acá (+ su .fx-blast / .fx-spark abajo). */
+.fx-slash  { --fx-light: #fff6d8; --fx-main: #e8b35c; --fx-dark: #8a6a2e; --fx-glow: rgba(232, 179, 92, 0.7); }
+.fx-fire   { --fx-light: #fff0b8; --fx-main: #f5902f; --fx-dark: #b33c1e; --fx-glow: rgba(245, 144, 47, 0.9); }
+.fx-ice    { --fx-light: #ffffff; --fx-main: #9fe0f6; --fx-dark: #4aa6c9; --fx-glow: rgba(159, 224, 246, 0.9); }
+.fx-acid   { --fx-light: #e4ff9a; --fx-main: #8fcf2c; --fx-dark: #5c9a17; --fx-glow: rgba(160, 230, 60, 0.8); }
+.fx-poison { --fx-light: #b58ad8; --fx-main: #7a4fa8; --fx-dark: #4e2f72; --fx-glow: rgba(122, 79, 168, 0.9); }
+.fx-arcane { --fx-light: #f3e6ff; --fx-main: #b98cff; --fx-dark: #6a3fc4; --fx-glow: rgba(185, 140, 255, 0.9); }
+
+/* Formas del proyectil (campo fx.projectile de cada habilidad) */
+.fx-bolt.fx-shape-arrow {
+    width: 30px;
+    height: 4px;
+    border-radius: 2px;
+    background: linear-gradient(90deg, transparent, var(--fx-light) 40%, var(--fx-main));
+    box-shadow: 0 0 6px var(--fx-glow);
+}
+
+.fx-bolt.fx-shape-dart {
+    width: 26px;
+    height: 8px;
+    border-radius: 4px;
+    background: linear-gradient(90deg, transparent, var(--fx-main) 40%, var(--fx-light));
+    box-shadow: 0 0 10px var(--fx-glow);
+}
+
+.fx-bolt.fx-shape-orb {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 35%, var(--fx-light), var(--fx-main) 55%, var(--fx-dark));
+    box-shadow: 0 0 12px var(--fx-glow);
+}
+
+/* ---- Corte (daño normal) ---- */
+@keyframes fxSlash {
+    0% { transform: rotate(var(--r)) scaleX(0); opacity: 1; }
+    55% { transform: rotate(var(--r)) scaleX(1); opacity: 1; }
+    100% { transform: rotate(var(--r)) scaleX(1.05); opacity: 0; }
+}
+.fx-streak {
+    position: absolute;
+    left: -10px;
+    top: calc(50% - 2px);
+    width: calc(100% + 20px);
+    height: 4px;
+    border-radius: 2px;
+    background: linear-gradient(90deg, transparent, #fff6d8 35%, #e8b35c 65%, transparent);
+    animation: fxSlash 0.34s ease-out both;
+}
+.fx-streak-2 { animation-delay: 0.08s; }
+
+@keyframes fxRing {
+    0% { transform: scale(0.2); opacity: 1; }
+    100% { transform: scale(6); opacity: 0; }
+}
+.fx-ring {
+    position: absolute;
+    left: calc(50% - 5px);
+    top: calc(50% - 5px);
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    border: 2px solid #fff3c4;
+    animation: fxRing 0.45s ease-out 0.12s both;
+}
+
+/* ---- Explosión (impactos de fuego y todas las áreas) ---- */
+@keyframes fxBlast {
+    0% { transform: scale(0.3); opacity: 0; }
+    25% { transform: scale(1.05); opacity: 1; }
+    100% { transform: scale(1.2); opacity: 0; }
+}
+.fx-blast {
+    position: absolute;
+    inset: 0;
+    border-radius: 8px;
+    animation: fxBlast 0.7s ease-out both;
+}
+.fx-blast.fx-fire { background: radial-gradient(circle, #ffe7a8 0, #f08a2c 32%, rgba(179, 60, 30, 0.65) 58%, transparent 76%); }
+.fx-blast.fx-ice { background: radial-gradient(circle, #ffffff 0, #9fe0f6 35%, rgba(74, 166, 201, 0.55) 60%, transparent 76%); }
+.fx-blast.fx-acid { background: radial-gradient(circle, #eaffb0 0, #a6dd3a 35%, rgba(92, 154, 23, 0.55) 60%, transparent 76%); }
+.fx-blast.fx-arcane { background: radial-gradient(circle, #f3e6ff 0, #b98cff 35%, rgba(106, 63, 196, 0.55) 60%, transparent 76%); }
+.fx-blast.fx-slash { background: radial-gradient(circle, #fff3d0 0, #d6ae6a 35%, rgba(140, 100, 50, 0.5) 60%, transparent 76%); }
+.fx-blast.fx-poison { background: radial-gradient(circle, #e6d2f5 0, #b58ad8 35%, rgba(122, 79, 168, 0.55) 60%, transparent 76%); }
+
+@keyframes fxQuake {
+    0%, 100% { transform: none; }
+    20% { transform: translate(-4px, 2px); }
+    40% { transform: translate(4px, -2px); }
+    60% { transform: translate(-2px, 1px); }
+    80% { transform: translate(1px, -1px); }
+}
+.board-wrap.fx-quake { animation: fxQuake 0.42s ease-out 0.08s; }
+
+/* ---- Partículas (brasas, chispas) ---- */
+@keyframes fxSpark {
+    0% { transform: translate(0, 0); opacity: 1; }
+    100% { transform: translate(var(--dx), var(--dy)); opacity: 0; }
+}
+.fx-spark {
+    position: absolute;
+    left: -3px;
+    top: -3px;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    animation: fxSpark 0.85s ease-out 0.05s both;
+}
+.fx-spark.fx-fire { background: #ffb347; box-shadow: 0 0 6px #ff8a3d; }
+.fx-spark.fx-ice { background: #e4f8ff; box-shadow: 0 0 6px #9fe0f6; }
+.fx-spark.fx-acid { background: #b8e85a; box-shadow: 0 0 6px #8fcf2c; }
+.fx-spark.fx-arcane { background: #d7bcff; box-shadow: 0 0 6px #b98cff; }
+.fx-spark.fx-slash { background: #f1d59a; box-shadow: 0 0 6px #e8b35c; }
+.fx-spark.fx-poison { background: #c9a6e6; box-shadow: 0 0 6px #7a4fa8; }
+
+/* ---- Hielo ---- */
+@keyframes fxShard {
+    0% { transform: rotate(var(--a)) translateY(-84px); opacity: 0; }
+    30% { opacity: 1; }
+    100% { transform: rotate(var(--a)) translateY(-14px); opacity: 0; }
+}
+.fx-shard {
+    position: absolute;
+    left: -4px;
+    top: -26px;
+    width: 8px;
+    height: 26px;
+    background: linear-gradient(#f2fdff, #7fd3f0);
+    clip-path: polygon(0 0, 100% 0, 50% 100%);
+    transform-origin: 50% 100%;
+    animation: fxShard 0.42s ease-in both;
+}
+@keyframes fxFade {
+    0% { opacity: 0; }
+    20% { opacity: 1; }
+    100% { opacity: 0; }
+}
+.fx-frost {
+    position: absolute;
+    inset: 0;
+    border-radius: 6px;
+    background: radial-gradient(circle, rgba(210, 244, 255, 0.6) 0, rgba(127, 211, 240, 0.28) 50%, transparent 76%);
+    box-shadow: inset 0 0 0 2px rgba(180, 230, 255, 0.75);
+    animation: fxFade 0.9s ease-out 0.3s both;
+}
+
+/* ---- Ácido y veneno ---- */
+@keyframes fxPuddle {
+    0% { transform: scale(0.2); opacity: 0; }
+    30% { opacity: 0.85; }
+    100% { transform: scale(1); opacity: 0; }
+}
+.fx-puddle {
+    position: absolute;
+    inset: 10px;
+    border-radius: 50%;
+    background: radial-gradient(circle, var(--fx-main, #a6dd3a) 0, transparent 70%);
+    animation: fxPuddle 0.9s ease-out both;
+}
+.fx-drop {
+    position: absolute;
+    left: -4px;
+    top: -4px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50% 50% 50% 0;
+    background: var(--fx-main, #a6dd3a);
+    box-shadow: 0 0 5px var(--fx-glow, rgba(160, 230, 60, 0.7));
+    animation: fxSpark 0.75s ease-out both;
+}
+
+/* ---- Magia ---- */
+.fx-arcane-ring {
+    position: absolute;
+    left: calc(50% - 8px);
+    top: calc(50% - 8px);
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    border: 3px solid #c59bff;
+    box-shadow: 0 0 10px rgba(185, 140, 255, 0.8);
+    animation: fxRing 0.55s ease-out both;
+}
+
+/* ---- Curación ---- */
+.fx-heal-glow {
+    position: absolute;
+    inset: 0;
+    border-radius: 6px;
+    background: radial-gradient(circle, rgba(106, 223, 143, 0.45) 0, transparent 70%);
+    animation: fxFade 0.9s ease-out both;
+}
+@keyframes fxRise {
+    0% { transform: translate(var(--dx), 14px) scale(0.5); opacity: 0; }
+    25% { opacity: 1; }
+    100% { transform: translate(var(--dx), -54px) scale(1); opacity: 0; }
+}
+.fx-plus {
+    position: absolute;
+    left: -7px;
+    top: -7px;
+    width: 14px;
+    height: 14px;
+    background:
+        linear-gradient(#7ff0a2, #7ff0a2) center / 3px 14px no-repeat,
+        linear-gradient(#7ff0a2, #7ff0a2) center / 14px 3px no-repeat;
+    animation: fxRise 0.95s ease-out both;
+}
+
+/* ---- Auras (Defender, Evasión/Dash, buffs) ---- */
+@keyframes fxAura {
+    0% { transform: scale(0.4); opacity: 0; }
+    30% { transform: scale(1.08); opacity: 1; }
+    60% { transform: scale(1); }
+    85% { opacity: 1; }
+    100% { transform: scale(1); opacity: 0; }
+}
+.fx-aura {
+    position: absolute;
+    left: calc(50% - 40px);
+    top: calc(50% - 40px);
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    animation: fxAura 0.9s ease-out both;
+}
+.fx-aura-shield { border: 3px solid var(--amber); box-shadow: 0 0 16px rgba(201, 154, 74, 0.75), inset 0 0 14px rgba(201, 154, 74, 0.5); }
+.fx-aura-dodge { border: 2px dashed #7fd8d2; box-shadow: 0 0 14px rgba(74, 167, 162, 0.6); }
+.fx-aura-buff { border: 3px solid #ffd700; box-shadow: 0 0 18px rgba(255, 215, 0, 0.55), inset 0 0 12px rgba(255, 215, 0, 0.4); }
+
+/* ---- Reacción de la ficha ---- */
+@keyframes fxHurt {
+    0% { transform: none; filter: none; }
+    15% { transform: translateX(-7px); filter: brightness(2) saturate(0.3); }
+    30% { transform: translateX(6px); }
+    45% { transform: translateX(-4px); }
+    60% { transform: translateX(2px); filter: none; }
+    100% { transform: none; }
+}
+.unit-token.fx-hurt { animation: fxHurt 0.5s ease-out; }
+
+@keyframes fxDodge {
+    0% { transform: none; opacity: 1; }
+    30% { transform: translate(26px, -8px); opacity: 0.5; }
+    70% { transform: translate(26px, -8px); opacity: 0.5; }
+    100% { transform: none; opacity: 1; }
+}
+.unit-token.fx-dodge { animation: fxDodge 0.7s ease-in-out; }
+
+.dodge-float {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    font-family: var(--mono);
+    font-weight: 700;
+    font-size: 18px;
+    color: #7fd8d2;
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.9);
+    pointer-events: none;
+    white-space: nowrap;
+    animation: floatUp 750ms ease-out forwards;
+    z-index: 5;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .board-wrap.fx-quake,
+    .unit-token.fx-hurt,
+    .unit-token.fx-dodge { animation: none; }
+}
+
+/* ---- Pantallas angostas (celular): el panel lateral baja debajo del
+   tablero y toma su mismo ancho; el panel del jugador pasa a una fila. ---- */
+@media (max-width: 1160px) {
+    .layout {
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .side {
+        width: 100%;
+        max-width: 792px;
+    }
+
+    .side .unit-card.player {
+        display: grid;
+        grid-template-columns: auto minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr);
+        align-items: center;
+        column-gap: 16px;
+    }
+
+    .side .unit-card.player h3,
+    .side .unit-card.player .bar-row {
+        margin: 0;
+    }
+}
+
+/* ---- Celular (viewport real, ver <meta name="viewport"> en el PHP) ----
+   Casillas de ~40px: se achican bordes, nameplates, barras, números
+   flotantes y auras para que entren. En computadora no aplica. */
+@media (max-width: 600px) {
+    :root {
+        --cell: min(92px, calc((100vw - 60px) / 8));
+    }
+
+    body.combat-body {
+        padding: 14px 12px 40px;
+    }
+
+    .combat-body .subtitle {
+        margin-bottom: 12px;
+    }
+
+    .layout {
+        gap: 12px;
+    }
+
+    .board-wrap {
+        padding: 6px;
+    }
+
+    .cell {
+        font-size: 14px;
+    }
+
+    .player-unit .unit-icon,
+    .enemy-unit .unit-icon {
+        border-width: 2px;
+        box-shadow: 0 3px 5px rgba(0, 0, 0, 0.55);
+    }
+
+    .turn-ring {
+        inset: -4px;
+    }
+
+    /* Nameplates ocultos: aparecen unos segundos al tocar la ficha
+       (clase .peek, ver peekNameplate en battle.js). Nombre + HP en hasta
+       dos líneas, un poco más ancho que la casilla. */
+    .unit-nameplate {
+        display: none;
+        top: -4px;
+        font-size: 7px;
+        letter-spacing: 0;
+        padding: 1px 3px;
+        line-height: 1.15;
+        white-space: normal;
+        width: max-content;
+        max-width: calc(var(--cell) * 1.7);
+        text-align: center;
+    }
+
+    .cell.peek .unit-nameplate {
+        display: block;
+        z-index: 6;
+    }
+
+    .unit-hp {
+        left: 5px;
+        right: 5px;
+        bottom: 2px;
+        height: 3px;
+    }
+
+    .dmg-float,
+    .heal-float {
+        font-size: 20px;
+    }
+
+    .defend-badge,
+    .dodge-badge {
+        font-size: 8px;
+    }
+
+    .fx-aura {
+        left: calc(50% - var(--cell) * 0.45);
+        top: calc(50% - var(--cell) * 0.45);
+        width: calc(var(--cell) * 0.9);
+        height: calc(var(--cell) * 0.9);
+    }
+
+    /* Panel del jugador en una fila: HP con barra, MOV y PA solo número */
+    .side .unit-card.player {
+        grid-template-columns: minmax(0, 2fr) auto auto;
+        padding: 10px 12px;
+    }
+
+    .side .unit-card.player h3 {
+        display: none;
+    }
+
+    .side .unit-card.player div.bar-row:nth-of-type(n+2) .bar-track {
+        display: none;
+    }
+
+    /* Textos más chicos para que tablero + habilidades entren en pantalla */
+    .combat-body h1 {
+        font-size: 12px;
+        letter-spacing: 2px;
+    }
+
+    .combat-body .subtitle {
+        font-size: 10px;
+    }
+
+    .side {
+        gap: 10px;
+    }
+
+    .side .unit-card {
+        padding: 8px 10px;
+    }
+
+    .side .bar-row {
+        font-size: 10px;
+    }
+
+    .hand {
+        gap: 6px;
+    }
+
+    .card-btn {
+        padding: 6px 8px;
+        font-size: 10px;
+    }
+
+    .card-meta {
+        font-size: 8.5px;
+        margin-top: 1px;
+    }
+
+    .card-cd {
+        top: 5px;
+        right: 6px;
+        font-size: 9px;
+    }
+
+    .end-turn-btn {
+        padding: 8px;
+        font-size: 11px;
+    }
+
+    .log {
+        font-size: 10px;
+        height: 120px;
+    }
+}

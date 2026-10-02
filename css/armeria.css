@@ -1,0 +1,128 @@
+/* Reusa las variables de :root definidas en battle.css (colores, mono,
+   sans) — este archivo solo agrega el layout específico de la
+   armería, no vuelve a declarar la paleta. */
+
+.armeria-wrap {
+    width: 100%;
+    max-width: 760px;
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+    align-items: stretch;
+}
+
+.armeria-slots {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.armeria-slot-section h3 {
+    font-family: var(--mono);
+    font-size: 13px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--amber);
+    margin: 0 0 4px;
+}
+
+.armeria-current {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-dim);
+    margin-bottom: 10px;
+}
+
+.armeria-item-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.armeria-item-card {
+    background: var(--panel);
+    border: 1px solid #2c313b;
+    border-radius: 6px;
+    padding: 10px 12px;
+    min-width: 200px;
+    flex: 1 1 200px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.armeria-item-card.equipped {
+    border-color: var(--teal);
+}
+
+.armeria-item-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    font-family: var(--mono);
+}
+
+.armeria-item-name {
+    font-size: 13px;
+    color: var(--text);
+}
+
+.armeria-item-price {
+    font-size: 11px;
+    color: var(--amber);
+}
+
+.armeria-item-stats {
+    font-family: var(--sans);
+    font-size: 12px;
+    color: var(--text-dim);
+}
+
+.armeria-item-btn {
+    align-self: flex-start;
+    background: var(--teal);
+    color: #0c1a19;
+    border: none;
+    border-radius: 5px;
+    padding: 6px 14px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    font-family: var(--mono);
+    text-transform: uppercase;
+    font-size: 11px;
+}
+
+.armeria-item-btn:hover:not(:disabled) {
+    filter: brightness(1.1);
+}
+
+.armeria-item-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    background: #363c48;
+    color: var(--text-dim);
+}
+
+/* ---------- Celular: una carta por fila, textos un poco más chicos ---------- */
+
+@media (max-width: 600px) {
+    .armeria-wrap {
+        gap: 16px;
+    }
+    .armeria-slots {
+        gap: 18px;
+    }
+    .armeria-item-card {
+        min-width: 0;
+        flex-basis: 100%;
+        padding: 9px 10px;
+        gap: 6px;
+    }
+    .armeria-item-name {
+        font-size: 12px;
+    }
+    .armeria-item-stats {
+        font-size: 11px;
+    }
+}

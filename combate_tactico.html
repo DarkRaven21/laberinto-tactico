@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Combate Táctico — Prototipo</title>
+  <link rel="stylesheet" href="css/battle.css?ver=2026.10.02a">
+  <script type="module" src="js/battle.js?ver=2026.10.02a"></script>
+</head>
+
+<body class="combat-body">
+
+  <h1>Combate Táctico</h1>
+  <div class="subtitle">prototipo — jugador vs. goblin + lobo · tablero 8×8</div>
+
+  <div class="layout">
+    <div class="board-wrap">
+      <div class="board" id="board"></div>
+    </div>
+
+    <div class="side">
+      <div class="unit-card player" id="playerCard">
+        <h3>Jugador</h3>
+        <div class="bar-row"><span>HP</span>
+          <div class="bar-track">
+            <div class="bar-fill hp-fill" id="playerHpBar"></div>
+          </div><span id="playerHpText"></span>
+        </div>
+        <div class="bar-row"><span>MOV</span>
+          <div class="bar-track">
+            <div class="bar-fill mv-fill" id="playerMvBar"></div>
+          </div><span id="playerMvText"></span>
+        </div>
+        <div class="bar-row"><span>PA</span>
+          <div class="bar-track">
+            <div class="bar-fill ap-fill" id="playerApBar"></div>
+          </div><span id="playerApText"></span>
+        </div>
+      </div>
+
+      <div class="hand" id="hand"></div>
+
+      <button class="end-turn-btn" id="endTurnBtn">Terminar turno</button>
+
+
+      <div class="log" id="log"></div>
+    </div>
+  </div>
+
+  <div class="overlay" id="overlay">
+    <h2 id="overlayTitle"></h2>
+    <button class="restart-btn" id="restartBtn">Nuevo combate</button>
+  </div>
+</body>
+
+</html>
