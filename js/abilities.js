@@ -303,7 +303,7 @@ export const ABILITIES = {
     empower: {
         name: "Potenciar", range: 3, apCost: 1, cooldown: 1, needsTarget: true, targetType: "ally",
         buffStats: ["Concentración", "Conocimiento", "Carisma", "Voluntad", "Afinidad mágica"],
-        buffMultiplier: 0.35,
+        buffMultiplier: 0.15,
         buffType: "AP",
         // Aumenta los PA del aliado en: floor(promedio * buffMultiplier), mínimo 1.
         // Sobre otro aliado: los PA llegan al arrancar SU próximo turno (apBonusPending).
