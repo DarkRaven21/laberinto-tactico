@@ -66,6 +66,16 @@ export const BIOMES = {
             { art: "ripples", chance: 0.16 }
         ]
     },
+    dwarvenLab: {
+        name: "Laboratorio Enano",
+        obstacles: ["boulder", "boulder", "boulder", "rubble", "rubble", "rubble", "stalagmite", "stalagmite", "crystalRock"],
+        groundDecor: [
+            { art: "runeGlow", chance: 0.03 },
+            { art: "bolts", chance: 0.06 },
+            { art: "oilPuddle", chance: 0.06 },
+            { art: "dirt", chance: 0.16 }
+        ]
+    },
 };
 
 // Familia → bioma. Una familia que no figure acá usa DEFAULT_BIOME.
@@ -76,6 +86,7 @@ export const FAMILY_BIOME = {
     jungleTribe: "swamp",
     bandidos: "camp",
     desert: "desert",
+    dwarvenLaboratory: "dwarvenLab",
 };
 export const DEFAULT_BIOME = "forest";
 
@@ -115,6 +126,12 @@ const OBSTACLE_ART = {
     rockPile: svg(`<ellipse cx="48" cy="70" rx="34" ry="9" fill="rgba(0,0,0,0.38)"/><path d="M14 70 L22 46 L40 37 L56 47 L60 70 Z" fill="#7a5f42"/><path d="M40 37 L56 47 L60 70 L47 70 Z" fill="#5c4630"/><path d="M50 70 L58 52 L72 47 L82 70 Z" fill="#8a6c4c"/><path d="M72 47 L82 70 L72 70 Z" fill="#6a5238"/><path d="M24 49 L38 42 M60 55 L70 51" stroke="#a88a64" stroke-width="2" stroke-linecap="round"/>`),
     duneMound: svg(`<ellipse cx="46" cy="68" rx="38" ry="10" fill="rgba(0,0,0,0.28)"/><path d="M6 66 Q28 28 50 38 Q70 46 86 66 Z" fill="#b8925a"/><path d="M50 38 Q70 46 86 66 L62 66 Q58 50 50 38 Z" fill="#94723f"/><path d="M18 58 q14 -10 28 -8 M24 64 q14 -8 30 -6" stroke="#d6b77c" stroke-width="1.6" fill="none" stroke-linecap="round"/>`),
     brokenColumn: svg(`<ellipse cx="48" cy="75" rx="30" ry="6" fill="rgba(0,0,0,0.38)"/><rect x="26" y="66" width="40" height="8" rx="1" fill="#a99c7f"/><rect x="32" y="32" width="28" height="34" fill="#d2c4a0"/><path d="M38 34v32M46 34v32M54 34v32" stroke="#b3a582" stroke-width="2"/><path d="M32 32 L38 25 L44 31 L50 22 L56 29 L60 26 L60 32 Z" fill="#d2c4a0"/><g transform="rotate(-15 72 66)"><rect x="64" y="61" width="18" height="10" rx="2" fill="#c3b591"/><path d="M69 61v10M75 61v10" stroke="#a99c7f" stroke-width="1.5"/></g>`),
+
+    // Laboratorio Enano
+    boulder: svg(`<ellipse cx="50" cy="70" rx="34" ry="10" fill="rgba(0,0,0,0.4)"/><path d="M16 66 Q14 44 30 32 Q46 22 62 30 Q78 38 76 58 Q74 70 56 72 L30 72 Q18 72 16 66Z" fill="#6a6560"/><path d="M62 30 Q78 38 76 58 Q74 70 56 72 Q66 56 62 30Z" fill="#544f4a"/><path d="M28 40 Q38 32 50 34" stroke="#8a847d" stroke-width="3" fill="none" stroke-linecap="round"/><path d="M40 52 l8 6 l6 -3" stroke="#4a4540" stroke-width="1.6" fill="none"/>`),
+    rubble: svg(`<ellipse cx="48" cy="72" rx="34" ry="8" fill="rgba(0,0,0,0.38)"/><path d="M16 70 L22 54 L36 50 L42 62 L40 70Z" fill="#6a6560"/><path d="M36 70 L42 46 L58 40 L66 52 L62 70Z" fill="#76706a"/><path d="M58 40 L66 52 L62 70 L54 70Z" fill="#5c5752"/><path d="M60 70 L66 58 L78 58 L82 70Z" fill="#625d58"/><path d="M42 46 L58 40" stroke="#948d85" stroke-width="2" stroke-linecap="round"/><circle cx="28" cy="75" r="3" fill="#6a6560"/>`),
+    stalagmite: svg(`<ellipse cx="48" cy="76" rx="26" ry="6" fill="rgba(0,0,0,0.4)"/><path d="M28 76 L40 22 L50 76Z" fill="#6e665c"/><path d="M40 22 L50 76 L43 76Z" fill="#574f46"/><path d="M46 76 L58 40 L68 76Z" fill="#7a7266"/><path d="M58 40 L68 76 L62 76Z" fill="#5f574d"/><path d="M38 40 l-2 14 M56 54 l-1 10" stroke="#948a7c" stroke-width="1.5" stroke-linecap="round"/>`),
+    crystalRock: svg(`<circle cx="50" cy="40" r="20" fill="#5fd3e6" opacity="0.1"/><ellipse cx="48" cy="72" rx="30" ry="8" fill="rgba(0,0,0,0.4)"/><path d="M20 70 L26 52 L44 46 L60 50 L72 70Z" fill="#5f5a55"/><path d="M60 50 L72 70 L56 70Z" fill="#4c4844"/><path d="M40 52 L44 28 L50 50Z" fill="#7ee3f2"/><path d="M44 28 L50 50 L46 52Z" fill="#46b8cc"/><path d="M50 50 L58 34 L60 52Z" fill="#7ee3f2"/><path d="M58 34 L60 52 L56 52Z" fill="#46b8cc"/><path d="M32 54 L30 42 L38 52Z" fill="#9aeaf6"/>`),
 };
 
 // Decoración de suelo: dibujada centrada en x=46 y corrida al azar
@@ -149,6 +166,11 @@ const DECOR_ART = {
     oxSkull: `<ellipse cx="46" cy="70" rx="14" ry="3" fill="rgba(0,0,0,0.25)"/><path d="M38 54 q-12 -2 -15 -12 q9 6 17 4z M54 54 q12 -2 15 -12 q-9 6 -17 4z" fill="#e6dcc4"/><path d="M38 51 h16 l-2 17 q-6 4 -12 0z" fill="#e6dcc4"/><circle cx="42" cy="57" r="2.2" fill="#5c4630"/><circle cx="50" cy="57" r="2.2" fill="#5c4630"/><path d="M44 64h4" stroke="#b3a582" stroke-width="1.2"/>`,
     scarab: `<ellipse cx="46" cy="62" rx="6" ry="8" fill="#2f4a5a"/><path d="M46 54v16" stroke="#6f9ab0" stroke-width="1"/><circle cx="46" cy="53" r="3" fill="#24394a"/><path d="M40 58l-5 -3M40 63l-6 0M40 67l-5 3M52 58l5 -3M52 63l6 0M52 67l5 3" stroke="#24394a" stroke-width="1.4" stroke-linecap="round"/><path d="M43 57 q3 2 6 0" stroke="#8ec3d6" stroke-width="1" fill="none" opacity="0.7"/>`,
     sack: `<ellipse cx="48" cy="72" rx="16" ry="4" fill="rgba(0,0,0,0.35)"/><path d="M34 70 q-4 -18 8 -24 h8 q12 6 8 24z" fill="#9a8660"/><path d="M42 46 q4 -4 8 0" stroke="#6e5a3a" stroke-width="3" fill="none" stroke-linecap="round"/><path d="M40 60 q8 3 16 0" stroke="#7e6c4a" stroke-width="1.5" fill="none"/>`,
+    // Laboratorio Enano
+    dirt: `<ellipse cx="44" cy="62" rx="17" ry="6" fill="#33281e" opacity="0.75"/><circle cx="37" cy="60" r="3" fill="#4a3b2c"/><circle cx="49" cy="63" r="2.4" fill="#4a3b2c"/><circle cx="56" cy="58" r="1.8" fill="#5a4833"/><circle cx="31" cy="64" r="1.5" fill="#5a4833"/>`,
+    oilPuddle: `<path d="M28 62 q4 -8 18 -7 q14 -1 18 6 q-2 9 -18 8 q-16 1 -18 -7z" fill="#121110" opacity="0.85"/><ellipse cx="42" cy="59" rx="7" ry="2" fill="#5a4a7a" opacity="0.45"/><ellipse cx="51" cy="63" rx="5" ry="1.5" fill="#3f6a6a" opacity="0.45"/>`,
+    bolts: `<polygon points="45,60 42.5,64.3 37.5,64.3 35,60 37.5,55.7 42.5,55.7" fill="#8a918a"/><circle cx="40" cy="60" r="1.8" fill="#2e3034"/><polygon points="55,52 53.5,54.6 50.5,54.6 49,52 50.5,49.4 53.5,49.4" fill="#7a828a"/><circle cx="52" cy="52" r="1.1" fill="#2e3034"/><g transform="rotate(-30 56 66)"><rect x="50" y="64.5" width="13" height="3" fill="#7a828a"/><rect x="48" y="63" width="4" height="6" rx="1" fill="#8a918a"/></g>`,
+    runeGlow: `<circle cx="46" cy="60" r="15" fill="#5fd3e6" opacity="0.08"/><circle cx="46" cy="60" r="10" fill="none" stroke="#5fd3e6" stroke-width="1.4" opacity="0.7"/><path d="M46 52 v16 M40 56 l12 8 M52 56 l-12 8" stroke="#7ee3f2" stroke-width="1.4" stroke-linecap="round" opacity="0.8"/>`,
 };
 
 // Cuánto se puede correr la decoración hacia los costados (px).

@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Admin · Habilidades y stats</title>
+<style>
+    :root { --bg: #16140f; --panel: #211d17; --line: #3a332a; --text: #e8e0cf; --muted: #a39782; --accent: #d9a560; }
+    * { box-sizing: border-box; }
+    body { margin: 0; padding: 16px; background: var(--bg); color: var(--text); font: 14px/1.4 system-ui, sans-serif; }
+    h1 { font-size: 18px; margin: 0 0 4px; }
+    .hint { color: var(--muted); margin: 0 0 12px; font-size: 13px; }
+    .toolbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 10px; }
+    .toolbar input[type="search"] { background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 6px 10px; font-size: 14px; min-width: 220px; }
+    .toolbar button { background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 6px 12px; cursor: pointer; }
+    .toolbar label { color: var(--muted); font-size: 13px; display: flex; gap: 6px; align-items: center; }
+    .legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 13px; color: var(--muted); margin-bottom: 10px; }
+    .legend span b { color: var(--text); font-weight: 600; margin-right: 4px; }
+    .wrap { overflow: auto; max-height: calc(100vh - 170px); border: 1px solid var(--line); border-radius: 8px; }
+    table { border-collapse: separate; border-spacing: 0; }
+    th, td { border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); padding: 4px 6px; text-align: center; white-space: nowrap; background: var(--bg); }
+    thead th { position: sticky; z-index: 2; background: var(--panel); }
+    thead tr.names th { top: 0; height: 130px; vertical-align: bottom; }
+    thead tr.values th { top: 130px; }
+    th.stat-name span { writing-mode: vertical-rl; transform: rotate(180deg); font-weight: 500; font-size: 12px; }
+    th.stat-name.equip span { color: var(--accent); }
+    .sticky-1, .sticky-2 { position: sticky; z-index: 1; text-align: left; }
+    .sticky-1 { left: 0; min-width: 190px; }
+    .sticky-2 { left: 190px; min-width: 120px; font-weight: 600; }
+    thead .sticky-1, thead .sticky-2 { z-index: 3; }
+    td.sticky-1 small { color: var(--muted); display: block; font-size: 11px; }
+    td.result.empty { color: var(--muted); font-weight: 400; }
+    input.stat-input { width: 42px; background: var(--bg); color: var(--text); border: 1px solid var(--line); border-radius: 4px; padding: 3px; text-align: center; font-size: 13px; }
+    input.stat-input:not(:placeholder-shown) { border-color: var(--accent); }
+    td.mark { font-size: 13px; min-width: 30px; }
+    td.mark.damage { color: #e8743a; }
+    td.mark.reduction { color: #6fa3d6; }
+    td.mark.heal { color: #7fc46a; }
+    td.mark.buff { color: #e8d36a; }
+    td.mark.dodge { color: #b98cff; }
+    td.mark.debuff { color: #c9c6d6; }
+    td.mark.filled { background: #2c261e; }
+    tbody tr:hover td { background: #241f19; }
+    tbody tr.hidden { display: none; }
+</style>
+</head>
+<body>
+    <h1>Habilidades y stats</h1>
+    <p class="hint">Cargá valores en la fila de arriba y mirá el resultado de cada habilidad. Los stats vacíos cuentan como 0. Los valores quedan guardados en este navegador.</p>
+
+    <div class="toolbar">
+        <input type="search" id="filterInput" placeholder="Buscar habilidad">
+        <label><input type="checkbox" id="onlyFilled"> Solo habilidades que usan los stats cargados</label>
+        <button type="button" id="clearBtn">Limpiar valores</button>
+    </div>
+
+    <div class="legend">
+        <span><b style="color:#e8743a">●</b>Daño</span>
+        <span><b style="color:#6fa3d6">◆</b>Reducción</span>
+        <span><b style="color:#7fc46a">✚</b>Curación</span>
+        <span><b style="color:#e8d36a">▲</b>Buff</span>
+        <span><b style="color:#b98cff">%</b>Esquiva</span>
+        <span><b style="color:#c9c6d6">↓</b>Stats que baja al blanco (no entran en la cuenta)</span>
+        <span><b style="color:#d9a560">Aa</b>Stats de equipo</span>
+    </div>
+
+    <div class="wrap">
+        <table id="statsTable"></table>
+    </div>
+
+    <script type="module" src="js/admin.js?ver=2026.10.03a"></script>
+</body>
+</html>

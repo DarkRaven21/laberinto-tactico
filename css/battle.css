@@ -369,6 +369,25 @@ svg.lucide-icon {
 .biome-desert .cell.active.tone-2 { background: radial-gradient(circle at 45% 65%, #ad8a54 0, #937242 70%); }
 .biome-desert .cell:not(.active) { background: #4a3a24; }
 
+/* ---- Laboratorio Enano (familia dwarvenLaboratory) ---- */
+.board-wrap.biome-dwarvenLab {
+    border-color: #4a3d30;
+    background:
+        radial-gradient(ellipse at 25% 20%, #3a3026 0%, transparent 55%),
+        radial-gradient(ellipse at 80% 85%, #2e261e 0%, transparent 50%),
+        #1d1813;
+}
+/* Brillo rúnico celeste y una luz cálida de fragua */
+.board-wrap.biome-dwarvenLab::after {
+    background:
+        radial-gradient(circle at 30% 35%, rgba(95, 211, 230, 0.06) 0, transparent 22%),
+        radial-gradient(circle at 70% 70%, rgba(255, 170, 90, 0.05) 0, transparent 24%);
+}
+.biome-dwarvenLab .cell.active.tone-0 { background: radial-gradient(circle at 35% 30%, #544636 0, #42372b 70%); }
+.biome-dwarvenLab .cell.active.tone-1 { background: radial-gradient(circle at 60% 40%, #4f4233 0, #3e3429 70%); }
+.biome-dwarvenLab .cell.active.tone-2 { background: radial-gradient(circle at 45% 65%, #584939 0, #45392d 70%); }
+.biome-dwarvenLab .cell:not(.active) { background: #2a231c; }
+
 @media (prefers-reduced-motion: reduce) {
     .board-wrap[class*="biome-"]::after,
     .turn-ring { animation: none; }
