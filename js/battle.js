@@ -408,6 +408,40 @@ const ABILITIES = {
         damageMultiplier: 1.3,
         desc: "Alcance 2 · Daño según"
     },
+    // ---------- Familia dwarvenLaboratory (nivel 3) ----------
+    // Mech Orb. Área en cruz alrededor de quien la lanza (selfCentered:
+    // el impacto es su propia casilla y no se golpea a sí mismo) y solo
+    // daña a los rivales (opponentsOnly: no lastima a sus aliados).
+    // El -1 PA se acumula si le pegan varios orbes.
+    novaBurst: {
+        name: "Estallido Nova", range: 1, apCost: 1, cooldown: 1, needsTarget: true, targetType: "area",
+        aoeRadius: 1,
+        selfCentered: true,
+        opponentsOnly: true,
+        damageStats: ["Afinidad mágica", "Concentración", "Iniciativa", "Movilidad", "Foco Magico"],
+        damageMultiplier: 0.75,
+        damageType: "magic",
+        onHitApDrain: 1,
+        fx: { projectile: "none" },
+        desc: "Explota en cruz alrededor de quien la lanza · -1 PA a cada rival golpeado · CD 1"
+    },
+    // Mecha Flame. Stats de Estallido de Fuego con Impetu en vez de Sabiduría.
+    flamethrow: {
+        name: "Lanzallamas", range: 2, apCost: 2, cooldown: 2, needsTarget: true, targetType: "enemy",
+        damageStats: ["Inteligencia", "Impetu", "Autocontrol", "Determinación", "Foco Magico"],
+        damageMultiplier: 1.3,
+        damageType: "fuego",
+        fx: { projectile: "none" },
+        desc: "Alcance 2 · Chorro de fuego · CD 2"
+    },
+    // Mech Pulser. Híbrido distancia + magia, alcance de todo el tablero.
+    pulse: {
+        name: "Pulso", range: 8, apCost: 2, cooldown: 1, needsTarget: true, targetType: "enemy",
+        damageStats: ["Percepción", "Concentración", "Paciencia", "Arma Distancia", "Foco Magico"],
+        damageType: "magic",
+        fx: { projectile: "orb", arc: false },
+        desc: "Alcance 8 · Pulso de energía · CD 1"
+    },
 };
 
 const PASSIVES = {
@@ -1008,13 +1042,20 @@ async function performAreaAttack(attacker, impactPos, key) {
         await animateCardCast(key);
     }
 
-    const affectedCells = resolveAoeCells(impactPos, ab.aoeRadius);
+    // selfCentered: el área sale de la casilla de quien la lanza, sin
+    // importar qué casilla se haya elegido, y esa casilla queda afuera.
+    if (ab.selfCentered) impactPos = attacker.pos;
+    const affectedCells = resolveAoeCells(impactPos, ab.aoeRadius)
+        .filter(pos => !(ab.selfCentered && pos === attacker.pos));
     const rawDamage = computeAbilityDamage(attacker, key);
+    const attackerIsPlayer = attacker === state.player;
 
     const hits = [];
     for (const pos of affectedCells) {
         const victim = unitAt(pos);
         if (!victim) continue;
+        // opponentsOnly: el área ignora a los del mismo bando.
+        if (ab.opponentsOnly && (victim === state.player) === attackerIsPlayer) continue;
         const { dmg, dodged } = applyDamage(victim, rawDamage, ab.damageType);
         hits.push({ victim, pos, dmg, dodged });
     }

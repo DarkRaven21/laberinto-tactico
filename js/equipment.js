@@ -7,22 +7,31 @@
 import { getSession } from "./session.js";
 import { supabaseFetch } from "./httpClient.js";
 
-// v2: el catálogo ahora trae min_level/max_level/abilities/passives.
-// Cambiar la key invalida la caché vieja de las pestañas abiertas.
-const ITEMS_CACHE_KEY = "cache:items:v2";
+// v4: la caché guarda { at, data } y vence a los 15 minutos (igual que
+// enemies.js), así los ítems nuevos aparecen solos sin cambiar la key.
+// Cambiar la key solo hace falta si cambia el formato de lo guardado.
+const ITEMS_CACHE_KEY = "cache:items:v4";
+const CACHE_TTL_MS = 15 * 60 * 1000;
 
 export async function getItems() {
     const cached = sessionStorage.getItem(ITEMS_CACHE_KEY);
     if (cached) {
         try {
-            return JSON.parse(cached);
+            const { at, data } = JSON.parse(cached);
+            if (Array.isArray(data) && Date.now() - at < CACHE_TTL_MS) {
+                return data;
+            }
         } catch {
             // cache corrupta, seguimos y la pedimos de nuevo
         }
     }
     const res = await supabaseFetch("/rest/v1/items?select=*");
     const items = await res.json();
-    sessionStorage.setItem(ITEMS_CACHE_KEY, JSON.stringify(items));
+    try {
+        sessionStorage.setItem(ITEMS_CACHE_KEY, JSON.stringify({ at: Date.now(), data: items }));
+    } catch {
+        // sin espacio o storage bloqueado: seguimos sin caché
+    }
     return items;
 }
 
