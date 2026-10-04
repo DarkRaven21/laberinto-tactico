@@ -303,7 +303,7 @@ export const ABILITIES = {
     empower: {
         name: "Potenciar", range: 3, apCost: 1, cooldown: 1, needsTarget: true, targetType: "ally",
         buffStats: ["Concentración", "Conocimiento", "Carisma", "Voluntad", "Afinidad mágica"],
-        buffMultiplier: 0.15,
+        buffMultiplier: 0.35,
         buffType: "AP",
         // Aumenta los PA del aliado en: floor(promedio * buffMultiplier), mínimo 1.
         // Sobre otro aliado: los PA llegan al arrancar SU próximo turno (apBonusPending).
@@ -404,5 +404,47 @@ export const ABILITIES = {
         damageType: "magic",
         fx: { projectile: "orb", arc: false },
         desc: "Alcance 8 · Pulso de energía · CD 1"
+    },
+    // ---------- Familia seaNier (nivel 3) ----------
+    // Giant Crab. 4 stats a propósito: el Arma Melee pesa 1/4 del promedio.
+    clap: {
+        name: "Tenaza", range: 1, apCost: 2, cooldown: 1, needsTarget: true, targetType: "enemy",
+        damageStats: ["Fuerza", "Fortaleza", "Terquedad", "Arma Melee"],
+        damageMultiplier: 1.8,
+        damageType: "normal",
+        onHitMpDrain: 1,
+        fx: { projectile: "none" },
+        desc: "Alcance 1 · Si golpea, el blanco pierde 1 PM en su próximo turno · CD 1"
+    },
+    // Nier Soldier y Siren Paladin. Se pega con el arma pero sale de la magia del mar.
+    seaSlash: {
+        name: "Tajo Marino", range: 1, apCost: 1, cooldown: 0, needsTarget: true, targetType: "enemy",
+        damageStats: ["Arma Melee", "Inteligencia", "Afinidad mágica", "Fuerza", "Reflejos"],
+        damageMultiplier: 1.2,
+        damageType: "magic",
+        fx: { projectile: "none" },
+        desc: "Alcance 1 · Daño según"
+    },
+    // Nier Hunter.
+    seaShot: {
+        name: "Disparo Marino", range: 3, apCost: 1, cooldown: 0, needsTarget: true, targetType: "enemy",
+        damageStats: ["Arma Distancia", "Inteligencia", "Afinidad mágica", "Percepción", "Paciencia"],
+        damageMultiplier: 0.8,
+        damageType: "magic",
+        fx: { projectile: "orb", arc: false },
+        desc: "Alcance 3 · Daño según"
+    },
+    // Nier Shrouder. Como Estallido de Lianas, pero de hielo, saca PA en
+    // vez de PM y solo daña a los rivales (opponentsOnly).
+    mist: {
+        name: "Niebla", range: 3, apCost: 2, cooldown: 2, needsTarget: true, targetType: "area",
+        aoeRadius: 1,
+        opponentsOnly: true,
+        damageStats: ["Afinidad mágica", "Autocontrol", "Concentración", "Creatividad", "Foco Magico"],
+        damageMultiplier: 0.75,
+        damageType: "hielo",
+        onHitApDrain: 1,
+        fx: { projectile: "none" },
+        desc: "Alcance 3 · Explota en cruz (radio 1) · -1 PA a cada rival golpeado · CD 2"
     },
 };
