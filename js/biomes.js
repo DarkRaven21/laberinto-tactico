@@ -76,6 +76,20 @@ export const BIOMES = {
             { art: "dirt", chance: 0.16 }
         ]
     },
+    // El agua es un obstáculo más (casilla bloqueada pintada de mar), así
+    // que no todas las bloqueadas son rocas.
+    beach: {
+        name: "Playa",
+        obstacles: ["water", "water", "water", "seaRock", "seaRock", "mossyRock", "mossyRock", "rockSpire", "tidePool"],
+        groundDecor: [
+            { art: "shell", chance: 0.02 },
+            { art: "seaweed", chance: 0.05 },
+            { art: "puddle", chance: 0.05 },
+            { art: "pebbles", chance: 0.06 },
+            { art: "foam", chance: 0.06 },
+            { art: "wetSand", chance: 0.14 }
+        ]
+    },
 };
 
 // Familia → bioma. Una familia que no figure acá usa DEFAULT_BIOME.
@@ -87,6 +101,7 @@ export const FAMILY_BIOME = {
     bandidos: "camp",
     desert: "desert",
     dwarvenLaboratory: "dwarvenLab",
+    seaNier: "beach",
 };
 export const DEFAULT_BIOME = "forest";
 
@@ -132,6 +147,13 @@ const OBSTACLE_ART = {
     rubble: svg(`<ellipse cx="48" cy="72" rx="34" ry="8" fill="rgba(0,0,0,0.38)"/><path d="M16 70 L22 54 L36 50 L42 62 L40 70Z" fill="#6a6560"/><path d="M36 70 L42 46 L58 40 L66 52 L62 70Z" fill="#76706a"/><path d="M58 40 L66 52 L62 70 L54 70Z" fill="#5c5752"/><path d="M60 70 L66 58 L78 58 L82 70Z" fill="#625d58"/><path d="M42 46 L58 40" stroke="#948d85" stroke-width="2" stroke-linecap="round"/><circle cx="28" cy="75" r="3" fill="#6a6560"/>`),
     stalagmite: svg(`<ellipse cx="48" cy="76" rx="26" ry="6" fill="rgba(0,0,0,0.4)"/><path d="M28 76 L40 22 L50 76Z" fill="#6e665c"/><path d="M40 22 L50 76 L43 76Z" fill="#574f46"/><path d="M46 76 L58 40 L68 76Z" fill="#7a7266"/><path d="M58 40 L68 76 L62 76Z" fill="#5f574d"/><path d="M38 40 l-2 14 M56 54 l-1 10" stroke="#948a7c" stroke-width="1.5" stroke-linecap="round"/>`),
     crystalRock: svg(`<circle cx="50" cy="40" r="20" fill="#5fd3e6" opacity="0.1"/><ellipse cx="48" cy="72" rx="30" ry="8" fill="rgba(0,0,0,0.4)"/><path d="M20 70 L26 52 L44 46 L60 50 L72 70Z" fill="#5f5a55"/><path d="M60 50 L72 70 L56 70Z" fill="#4c4844"/><path d="M40 52 L44 28 L50 50Z" fill="#7ee3f2"/><path d="M44 28 L50 50 L46 52Z" fill="#46b8cc"/><path d="M50 50 L58 34 L60 52Z" fill="#7ee3f2"/><path d="M58 34 L60 52 L56 52Z" fill="#46b8cc"/><path d="M32 54 L30 42 L38 52Z" fill="#9aeaf6"/>`),
+
+    // Playa
+    water: svg(`<rect x="0" y="0" width="92" height="92" rx="3" fill="#2c6577"/><ellipse cx="36" cy="30" rx="36" ry="26" fill="#3a7d8f" opacity="0.7"/><path d="M12 34 q6 -4 12 0 t12 0" stroke="#8fd3e0" stroke-width="1.6" fill="none" opacity="0.5" stroke-linecap="round"/><path d="M42 62 q6 -4 12 0 t12 0 t12 0" stroke="#8fd3e0" stroke-width="1.6" fill="none" opacity="0.4" stroke-linecap="round"/>`),
+    seaRock: svg(`<ellipse cx="48" cy="72" rx="32" ry="8" fill="rgba(0,0,0,0.28)"/><path d="M18 70 Q16 50 30 40 Q42 30 58 34 Q76 40 76 60 Q76 70 64 72 Z" fill="#5b6266"/><path d="M58 34 Q76 40 76 60 Q76 70 64 72 Q70 54 58 34Z" fill="#484e52"/><path d="M28 46 Q38 38 50 39" stroke="#9aa4aa" stroke-width="3" fill="none" stroke-linecap="round"/><path d="M20 66 Q46 74 74 64" stroke="#2f3538" stroke-width="2" fill="none" opacity="0.5"/>`),
+    mossyRock: svg(`<ellipse cx="48" cy="72" rx="32" ry="8" fill="rgba(0,0,0,0.28)"/><path d="M18 70 Q16 50 30 40 Q42 30 58 34 Q76 40 76 60 Q76 70 64 72 Z" fill="#5f666a"/><path d="M58 34 Q76 40 76 60 Q76 70 64 72 Q70 54 58 34Z" fill="#4a5054"/><path d="M26 46 Q42 33 62 38" stroke="#5f8f45" stroke-width="6" fill="none" stroke-linecap="round"/><path d="M30 46 q4 10 0 18 M40 41 q5 12 1 22 M55 39 q-3 10 2 20" stroke="#4f7a3a" stroke-width="3" fill="none" stroke-linecap="round"/>`),
+    tidePool: svg(`<ellipse cx="46" cy="60" rx="31" ry="19" fill="#6b7175"/><ellipse cx="46" cy="60" rx="25" ry="14" fill="#2f7f93"/><ellipse cx="40" cy="56" rx="10" ry="3" fill="#8fd3e0" opacity="0.5"/><ellipse cx="52" cy="64" rx="6" ry="1.6" fill="#8fd3e0" opacity="0.35"/><circle cx="18" cy="60" r="6" fill="#5b6266"/><circle cx="74" cy="58" r="7" fill="#5b6266"/><circle cx="44" cy="42" r="5" fill="#5b6266"/><circle cx="60" cy="78" r="4" fill="#5b6266"/>`),
+    rockSpire: svg(`<ellipse cx="48" cy="76" rx="26" ry="6" fill="rgba(0,0,0,0.28)"/><path d="M30 76 L34 46 L44 26 L56 32 L62 52 L66 76Z" fill="#5f666a"/><path d="M56 32 L62 52 L66 76 L54 76 Z" fill="#4a5054"/><path d="M38 50 l10 4 M42 62 l12 2" stroke="#3a4044" stroke-width="2"/><path d="M40 34 l6 -4" stroke="#9aa4aa" stroke-width="2.5" stroke-linecap="round"/><path d="M28 72 q20 7 40 0" stroke="#f2f8f6" stroke-width="2.5" fill="none" opacity="0.65" stroke-linecap="round"/>`),
 };
 
 // Decoración de suelo: dibujada centrada en x=46 y corrida al azar
@@ -171,6 +193,13 @@ const DECOR_ART = {
     oilPuddle: `<path d="M28 62 q4 -8 18 -7 q14 -1 18 6 q-2 9 -18 8 q-16 1 -18 -7z" fill="#121110" opacity="0.85"/><ellipse cx="42" cy="59" rx="7" ry="2" fill="#5a4a7a" opacity="0.45"/><ellipse cx="51" cy="63" rx="5" ry="1.5" fill="#3f6a6a" opacity="0.45"/>`,
     bolts: `<polygon points="45,60 42.5,64.3 37.5,64.3 35,60 37.5,55.7 42.5,55.7" fill="#8a918a"/><circle cx="40" cy="60" r="1.8" fill="#2e3034"/><polygon points="55,52 53.5,54.6 50.5,54.6 49,52 50.5,49.4 53.5,49.4" fill="#7a828a"/><circle cx="52" cy="52" r="1.1" fill="#2e3034"/><g transform="rotate(-30 56 66)"><rect x="50" y="64.5" width="13" height="3" fill="#7a828a"/><rect x="48" y="63" width="4" height="6" rx="1" fill="#8a918a"/></g>`,
     runeGlow: `<circle cx="46" cy="60" r="15" fill="#5fd3e6" opacity="0.08"/><circle cx="46" cy="60" r="10" fill="none" stroke="#5fd3e6" stroke-width="1.4" opacity="0.7"/><path d="M46 52 v16 M40 56 l12 8 M52 56 l-12 8" stroke="#7ee3f2" stroke-width="1.4" stroke-linecap="round" opacity="0.8"/>`,
+    // Playa
+    foam: `<path d="M22 60 q6 -4 12 0 t12 0 t12 0 t12 0" stroke="#f7fbfa" stroke-width="2" fill="none" opacity="0.75" stroke-linecap="round"/><path d="M30 66 q6 -3 12 0 t12 0 t12 0" stroke="#f7fbfa" stroke-width="1.5" fill="none" opacity="0.5" stroke-linecap="round"/>`,
+    puddle: `<ellipse cx="46" cy="62" rx="17" ry="6.5" fill="#5aa3b3" opacity="0.6"/><ellipse cx="41" cy="60" rx="6" ry="1.6" fill="#d6f1f5" opacity="0.7"/>`,
+    seaweed: `<path d="M28 64 q8 -6 16 0 q8 6 16 0" stroke="#3f6b33" stroke-width="3" fill="none" stroke-linecap="round"/><path d="M38 66 q4 -8 10 -6 M52 62 q3 6 9 5" stroke="#557f3f" stroke-width="2" fill="none" stroke-linecap="round"/>`,
+    pebbles: `<ellipse cx="38" cy="62" rx="4.5" ry="3.2" fill="#8d8a84"/><ellipse cx="48" cy="57" rx="3" ry="2.2" fill="#a29e96"/><ellipse cx="55" cy="64" rx="3.8" ry="2.6" fill="#77746e"/><ellipse cx="44" cy="67" rx="2.2" ry="1.6" fill="#9a968e"/>`,
+    wetSand: `<ellipse cx="46" cy="62" rx="22" ry="9" fill="#a8946c" opacity="0.38"/><ellipse cx="52" cy="66" rx="10" ry="3" fill="#a8946c" opacity="0.3"/>`,
+    shell: `<path d="M39 65 q7 -14 14 0 z" fill="#ecdccb"/><path d="M46 53 v12 M42.5 56 l1.8 9 M49.5 56 l-1.8 9" stroke="#c4a88f" stroke-width="1"/><rect x="43" y="64.5" width="6" height="2.5" rx="1" fill="#d9c3ad"/>`,
 };
 
 // Cuánto se puede correr la decoración hacia los costados (px).

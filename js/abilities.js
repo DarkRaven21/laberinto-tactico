@@ -92,7 +92,7 @@ export const ABILITIES = {
         name: "Estallido de Fuego", range: 2, apCost: 2, cooldown: 2, needsTarget: true, targetType: "area",
         aoeRadius: 1,
         damageStats: ["Inteligencia", "Sabiduría", "Autocontrol", "Determinación", "Foco Magico"],
-        damageMultiplier: 0.75,
+        damageMultiplier: 0.9,
         damageType: "fuego",
         fx: { projectile: "orb", arc: true },
         desc: "Alcance 2 · Explota en cruz (radio 1) · Daño según Inteligencia/Sabiduría/Autocontrol/Determinación x0.75 · CD 2"
@@ -107,14 +107,14 @@ export const ABILITIES = {
     firemagic: {
         name: "Magia de Fuego", range: 2, apCost: 1, cooldown: 0, needsTarget: true, targetType: "enemy",
         damageStats: ["Afinidad mágica", "Agresividad", "Agudeza mental", "Percepción", "Foco Magico"],
-        damageMultiplier: 0.4,
+        damageMultiplier: 0.45,
         damageType: "fuego",
         desc: "Alcance 2 · Daño según Inteligencia/Sabiduría/Autocontrol/Determinación x0.75 · CD 2"
     },
     icemagic: {
         name: "Magia de Hielo", range: 2, apCost: 1, cooldown: 0, needsTarget: true, targetType: "enemy",
         damageStats: ["Afinidad mágica", "Autocontrol", "Concentración", "Percepción", "Foco Magico"],
-        damageMultiplier: 0.4,
+        damageMultiplier: 0.45,
         damageType: "hielo",
         desc: "Alcance 2 · Daño según Inteligencia/Sabiduría/Autocontrol/Determinación x0.75 · CD 2"
     },
@@ -158,7 +158,7 @@ export const ABILITIES = {
         name: "Golpe de Escudo", range: 1, apCost: 1, cooldown: 1, needsTarget: true, targetType: "enemy",
         damageStats: ["Fuerza", "Resistencia", "Voluntad", "Mentalidad táctica", "Terquedad"],
         onHitMpDrain: 1,
-        damageMultiplier: 0.75,
+        damageMultiplier: 0.8,
         damageType: "normal",
         desc: "Alcance 1 · Daño según Fuerza/Agresividad/Atletismo/Instinto"
     },
@@ -343,7 +343,7 @@ export const ABILITIES = {
         name: "Estallido de Lianas", range: 3, apCost: 2, cooldown: 2, needsTarget: true, targetType: "area",
         aoeRadius: 1,
         damageStats: ["Agudeza mental", "Concentración", "Confianza", "Impulsividad", "Afinidad mágica", "Foco Magico"],
-        damageMultiplier: 0.75,
+        damageMultiplier: 0.8,
         onHitMpDrain: 1,
         damageType: "magic",
         fx: { effect: "acid", projectile: "none" },
