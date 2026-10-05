@@ -472,6 +472,23 @@ function bfsDistances(from, blockedSet) {
     return dist;
 }
 
+// BFS desde varias casillas a la vez: distancia de cada casilla a la
+// más cercana de `sources`, sin pasar por `blockedSet`.
+function bfsDistancesMulti(sources, blockedSet) {
+    const dist = new Array(SIZE * SIZE).fill(Infinity);
+    const queue = [];
+    for (const s of sources) { dist[s] = 0; queue.push(s); }
+    while (queue.length) {
+        const cur = queue.shift();
+        for (const n of neighbors4(cur)) {
+            if (!state.cells[n].active) continue;
+            if (blockedSet.has(n)) continue;
+            if (dist[n] > dist[cur] + 1) { dist[n] = dist[cur] + 1; queue.push(n); }
+        }
+    }
+    return dist;
+}
+
 // Camino real de `from` a `to` (para animar la caminata casilla por casilla)
 function bfsPath(from, to, blockedSet) {
     const dist = new Array(SIZE * SIZE).fill(Infinity);
@@ -1789,7 +1806,35 @@ async function runUnitAiTurn(u) {
                 const occupied = new Set(allUnits().filter(x => x !== u && x.hp > 0).map(x => x.pos));
                 const reach = bfsDistances(u.pos, occupied);
                 let bestCell = -1, bestMoveCost = Infinity, bestFieldDist = distToPlayer[u.pos], foundInRange = false;
+
+                // Rodear: distancia REAL caminando (esquivando a las demás
+                // unidades) hasta la casilla libre más cercana desde donde
+                // puede atacar. Así, si hay un aliado tapando el camino
+                // directo, da la vuelta en vez de quedarse quieto porque
+                // "en línea recta" no se acercaba.
+                const attackSpots = [];
                 for (let i = 0; i < SIZE * SIZE; i++) {
+                    if (!state.cells[i].active || occupied.has(i)) continue;
+                    if (distToPlayer[i] <= desiredRange) attackSpots.push(i);
+                }
+                const approach = bfsDistancesMulti(attackSpots, occupied);
+                if (isFinite(approach[u.pos])) {
+                    let bestApproach = approach[u.pos];
+                    for (let i = 0; i < SIZE * SIZE; i++) {
+                        if (i === u.pos || occupied.has(i) || !state.cells[i].active) continue;
+                        const moveCost = reach[i];
+                        if (!isFinite(moveCost) || moveCost > u.move) continue;
+                        if (approach[i] < bestApproach || (approach[i] === bestApproach && bestCell !== -1 && moveCost < bestMoveCost)) {
+                            bestApproach = approach[i];
+                            bestMoveCost = moveCost;
+                            bestCell = i;
+                        }
+                    }
+                }
+
+                // Si no hay ninguna casilla libre para atacar (el jugador ya
+                // está rodeado), se acerca como antes, por distancia directa.
+                if (bestCell === -1) for (let i = 0; i < SIZE * SIZE; i++) {
                     if (i === u.pos) continue;
                     if (!state.cells[i].active) continue;
                     if (occupied.has(i)) continue;
