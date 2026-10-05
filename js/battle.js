@@ -98,6 +98,13 @@ const PASSIVES = {
     // Sand Statue. Al recibir daño real y quedar viva por debajo del 30%,
     // se cura en ese mismo golpe max(1, floor(Regeneración / 5)). Si el
     // golpe la mata, no se cura. Ver applyLowHpHealIfAny.
+    // Swarm. +1 PM siempre (hpThreshold 1 = siempre activa). Como toda
+    // pasiva, pasa al jugador con el alma.
+    flutter: {
+        name: "Revoloteo",
+        hpThreshold: 1,
+        resourceBoosts: { move: 1 }
+    },
     hardToKill: {
         name: "Duro de Matar",
         lowHpHeal: { threshold: 0.3, stat: "Regeneración", divisor: 5 }
@@ -155,6 +162,8 @@ function freshUnit(cfg) {
         // PLAYER_CONFIG / el caché de criaturas, y mutarla contaminaría
         // los combates siguientes. Un unit nuevo por combate = se limpia solo.
         statDebuffs: {},
+        // Debuff porcentual temporal (ej: Ceguera): { stats: { stat: pct }, turnsLeft }.
+        percentDebuffs: null,
         passives: cfg.passives || [],       // NUEVO
         passivesActive: {}, 
         apDrainPending: 0,      // NUEVO
@@ -612,6 +621,15 @@ async function performAttack(attacker, target, key) {
             target.statDebuffs[st] = (target.statDebuffs[st] || 0) + dmg;
         });
         addLog(`${tgtLabel} queda maldito: -${dmg} a ${ab.debuffStats.join(", ")} hasta el final del combate.`);
+    }
+
+    // Genérico: debuffPercent baja un porcentaje de stats durante el
+    // próximo turno del golpeado. No se acumula: un golpe nuevo lo renueva.
+    if (ab.debuffPercent && dmg > 0) {
+        const stats = {};
+        ab.debuffPercent.stats.forEach(st => { stats[st] = ab.debuffPercent.percent; });
+        target.percentDebuffs = { stats, turnsLeft: ab.debuffPercent.turns || 1 };
+        addLog(`${tgtLabel} pierde ${Math.round(ab.debuffPercent.percent * 100)}% de ${ab.debuffPercent.stats.join(" y ")} en su próximo turno.`);
     }
 
     renderSide();
@@ -1193,6 +1211,10 @@ function effectiveStat(unit, statKey, target) {
     if (unit.tempStatBoosts && unit.tempStatBoosts[statKey] != null) {
         value = value * (1 + unit.tempStatBoosts[statKey]);
     }
+    // Debuff porcentual temporal (ej: Ceguera).
+    if (unit.percentDebuffs && unit.percentDebuffs.stats[statKey] != null) {
+        value = value * (1 - unit.percentDebuffs.stats[statKey]);
+    }
     unit.passives.forEach(key => {
         const p = PASSIVES[key];
         if (!p.statBoosts || p.statBoosts[statKey] == null) return;
@@ -1535,6 +1557,11 @@ async function runUnitAiTurn(u) {
     u.moveDrainPending = 0;
     u.moveBonusPending = 0;
     u.tempStatBoosts = null;
+    // Debuff porcentual: vale durante el turno que arranca y se borra al siguiente.
+    if (u.percentDebuffs) {
+        if (u.percentDebuffs.turnsLeft <= 0) u.percentDebuffs = null;
+        else u.percentDebuffs.turnsLeft--;
+    }
     u.defendActive = false;
     u.defendMagicResistant = false; 
     u.defendRetaliateMultiplier = 0;
@@ -1892,6 +1919,11 @@ function startPlayerTurn() {
     u.moveDrainPending = 0;
     u.moveBonusPending = 0;
     u.tempStatBoosts = null;
+    // Debuff porcentual: vale durante el turno que arranca y se borra al siguiente.
+    if (u.percentDebuffs) {
+        if (u.percentDebuffs.turnsLeft <= 0) u.percentDebuffs = null;
+        else u.percentDebuffs.turnsLeft--;
+    }
     u.defendActive = false;
     u.defendMagicResistant = false; 
     u.defendRetaliateMultiplier = 0;
@@ -2052,6 +2084,7 @@ function cardMetaShort(u, key) {
         if (ab.critChance) parts.push(`${Math.round(ab.critChance * 100)}% crít.`);
         if (ab.pullsToMelee) parts.push("Atrae");
         if (ab.debuffStats) parts.push("Maldice");
+        if (ab.debuffPercent) parts.push("Ciega");
         if (ab.onHitMpDrain) parts.push(`-${ab.onHitMpDrain} PM`);
         if (ab.onHitApDrain) parts.push(`-${ab.onHitApDrain} PA`);
         if (ab.trapMoveLoss) parts.push(`-${ab.trapMoveLoss} PM`);
@@ -2107,7 +2140,8 @@ function renderHand() {
             const dmgPreview = computeAbilityDamage(u, key);
             const aoeText = ab.aoeRadius ? ` · Área radio ${ab.aoeRadius}` : "";
             const pullText = ab.pullsToMelee ? " · Atrae al objetivo" : "";
-            const curseText = ab.debuffStats ? " · Maldice: baja sus atributos en el daño hecho" : "";
+            const curseText = (ab.debuffStats ? " · Maldice: baja sus atributos en el daño hecho" : "")
+                + (ab.debuffPercent ? ` · -${Math.round(ab.debuffPercent.percent * 100)}% ${ab.debuffPercent.stats.join(" y ")} en su próximo turno` : "");
             const mpText = (ab.onHitMpDrain ? ` · -${ab.onHitMpDrain} PM al golpeado` : "")
                 + (ab.onHitApDrain ? ` · -${ab.onHitApDrain} PA al golpeado` : "");
             const critPct = ab.critChance ? Math.round(ab.critChance * 100) : 0;

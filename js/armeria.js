@@ -1,7 +1,11 @@
-import { requireSession } from "./session.js";
+import { requireSession, getSession } from "./session.js";
 import { getBank } from "./citybank.js";
-import { getItems, getEquipment, connectItem, replaceItem, getCharacterLevel, isItemForLevel } from "./equipment.js";
+import {
+    getItems, getEquipment, connectItem, replaceItem, getCharacterLevel,
+    isItemForLevel, isItemNewForLevel, markArmeriaSeen
+} from "./equipment.js";
 import { ICON_COINS } from "./icons.js";
+import { ABILITIES } from "./abilities.js";
 
 requireSession();
 
@@ -27,6 +31,23 @@ function updateGoldLabel() {
 
 function statsLine(stats) {
     return Object.entries(stats || {}).map(([k, v]) => `${k} +${v}`).join(" · ");
+}
+
+// Habilidades y pasivas que da el ítem, solo el nombre. El nombre de la
+// habilidad sale de abilities.js; las pasivas viven en battle.js, así que
+// por ahora se muestra su clave.
+function grantsLine(item) {
+    const parts = [];
+    const abilities = (item.abilities || []).map(k => ABILITIES[k]?.name || k);
+    if (abilities.length) parts.push(`${abilities.length > 1 ? "Habilidades" : "Habilidad"}: ${abilities.join(", ")}`);
+    const passives = item.passives || [];
+    if (passives.length) parts.push(`${passives.length > 1 ? "Pasivas" : "Pasiva"}: ${passives.join(", ")}`);
+    return parts.join(" · ");
+}
+
+// El ítem equipado quedó de un rango de nivel anterior (ya no se vende).
+function isOutdated(item) {
+    return item && item.max_level != null && item.max_level < characterLevel;
 }
 
 // Comprar/equipar: item-connect si el slot está vacío, item-replace
@@ -57,21 +78,38 @@ function render() {
         const section = document.createElement("div");
         section.className = "armeria-slot-section";
 
+        const forSale = items.filter(it => it.slot === slot && isItemForLevel(it, characterLevel));
+        const slotHasNews = forSale.some(it => isItemNewForLevel(it, characterLevel));
+
         const heading = document.createElement("h3");
         heading.textContent = SLOT_LABELS[slot];
+        if (slotHasNews) {
+            const tag = document.createElement("span");
+            tag.className = "armeria-new-tag";
+            tag.textContent = "Nuevo";
+            heading.appendChild(tag);
+        }
         section.appendChild(heading);
 
+        // Lo equipado: solo el nombre, salvo que sea de un nivel anterior;
+        // en ese caso se muestra lo que da, para compararlo con lo nuevo.
         const currentKey = equipment[slot];
-        const currentLabel = currentKey ? (items.find(it => it.key === currentKey)?.label || currentKey) : "Ninguno";
+        const currentItem = currentKey ? items.find(it => it.key === currentKey) : null;
         const currentLine = document.createElement("div");
         currentLine.className = "armeria-current";
-        currentLine.textContent = `Equipado: ${currentLabel}`;
+        currentLine.textContent = `Equipado: ${currentItem?.label || currentKey || "Ninguno"}`;
+        if (isOutdated(currentItem)) {
+            currentLine.classList.add("armeria-current--outdated");
+            const detail = document.createElement("div");
+            detail.className = "armeria-current-detail";
+            const grants = grantsLine(currentItem);
+            detail.textContent = `De nivel anterior · Te da: ${statsLine(currentItem.stats)}${grants ? " · " + grants : ""}`;
+            currentLine.appendChild(detail);
+        }
         section.appendChild(currentLine);
 
         const list = document.createElement("div");
         list.className = "armeria-item-list";
-
-        const forSale = items.filter(it => it.slot === slot && isItemForLevel(it, characterLevel));
         if (forSale.length === 0) {
             const empty = document.createElement("div");
             empty.className = "armeria-empty";
@@ -83,14 +121,18 @@ function render() {
             const isEquipped = equipment[slot] === item.key;
             const canAfford = goldBalance >= item.price;
 
+            const isNew = isItemNewForLevel(item, characterLevel);
+            const grants = grantsLine(item);
+
             const card = document.createElement("div");
-            card.className = "armeria-item-card" + (isEquipped ? " equipped" : "");
+            card.className = "armeria-item-card" + (isEquipped ? " equipped" : "") + (isNew ? " is-new" : "");
             card.innerHTML = `
                 <div class="armeria-item-header">
-                    <span class="armeria-item-name">${item.label}</span>
+                    <span class="armeria-item-name">${item.label}${isNew ? ' <span class="armeria-new-tag">Nuevo</span>' : ""}</span>
                     <span class="armeria-item-price">${item.price} ${ICON_COINS}</span>
                 </div>
                 <div class="armeria-item-stats">${statsLine(item.stats)}</div>
+                ${grants ? `<div class="armeria-item-grants">${grants}</div>` : ""}
             `;
 
             const btn = document.createElement("button");
@@ -121,6 +163,9 @@ async function init() {
     characterLevel = levelRes;
     equipment = equipmentRes;
     goldBalance = bankRes.gold;
+    // Entró a la armería en este nivel: se apaga el "!" de la ciudad.
+    const session = getSession();
+    if (session) markArmeriaSeen(characterLevel, session.id);
     updateGoldLabel();
     render();
 }

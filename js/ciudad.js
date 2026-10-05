@@ -1,7 +1,7 @@
 import { getBank } from "./citybank.js";
-import { requireSession, clearSession } from "./session.js";
+import { requireSession, clearSession, getSession } from "./session.js";
 import { getLifestyle, setLifestyle, FOOD_OPTIONS, SLEEP_OPTIONS } from "./lifestyle.js";
-import { getItems, getEquipment, sellItem } from "./equipment.js";
+import { getItems, getEquipment, sellItem, hasUnseenArmeriaNews } from "./equipment.js";
 import { ICON_COINS } from "./icons.js";
 import { CITY_EVENTS, buyEvent } from "./events.js";
 import { PLAYER_CONFIG } from "./player.js";
@@ -600,6 +600,27 @@ function renderCharacterCard() {
     if (levelEl) levelEl.textContent = `Nivel ${PLAYER_CONFIG.level}`;
 }
 
+// "!" en el botón Armería cuando hay ítems nuevos para tu nivel que
+// todavía no viste (se apaga al entrar a la armería, ver armeria.js).
+function renderArmeriaBadge() {
+    const btn = document.getElementById("goToArmeriaBtn");
+    const session = getSession();
+    if (!btn || !session || !PLAYER_CONFIG) return;
+    const show = hasUnseenArmeriaNews(itemsCatalog, PLAYER_CONFIG.level, session.id);
+    btn.querySelector(".ciudad-nav-badge")?.remove();
+    btn.classList.toggle("ciudad-nav-btn--news", show);
+    if (show) {
+        const badge = document.createElement("span");
+        badge.className = "ciudad-nav-badge";
+        badge.textContent = "!";
+        badge.title = "Hay equipo nuevo para tu nivel";
+        btn.appendChild(badge);
+        btn.setAttribute("aria-label", "Armería (hay equipo nuevo para tu nivel)");
+    } else {
+        btn.removeAttribute("aria-label");
+    }
+}
+
 async function init() {
     renderCharacterCard();
     const [bank, itemsRes, equipmentRes] = await Promise.all([
@@ -614,6 +635,7 @@ async function init() {
     activeEvents = bank.active_events || [];
     usedEvents = bank.used_events || [];
     updateGoldLabel();
+    renderArmeriaBadge();
     await checkLifestyle();
 }
 

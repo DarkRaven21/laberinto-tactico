@@ -44,6 +44,39 @@ export function isItemForLevel(item, level) {
     return level >= min && (max === null || level <= max);
 }
 
+// ¿El item es NUEVO para este nivel? (aparece justo en este nivel). En
+// nivel 1 no se marca nada: ahí todo es nuevo y sería ruido.
+export function isItemNewForLevel(item, level) {
+    return level > 1 && (item.min_level ?? 1) === level;
+}
+
+// ---------- Aviso de novedades en la armería ----------
+// Guarda, por personaje y en este navegador, el último nivel en el que
+// entró a la armería. La ciudad muestra un "!" en el botón Armería si
+// hay ítems nuevos para el nivel actual y todavía no la visitó en ese nivel.
+function armeriaSeenKey(characterId) {
+    return `combate:armeriaSeenLevel:${characterId}`;
+}
+
+export function hasUnseenArmeriaNews(items, level, characterId) {
+    if (!items.some(it => isItemNewForLevel(it, level))) return false;
+    let seen = 0;
+    try {
+        seen = Number(localStorage.getItem(armeriaSeenKey(characterId))) || 0;
+    } catch {
+        // sin storage: se muestra el aviso
+    }
+    return seen < level;
+}
+
+export function markArmeriaSeen(level, characterId) {
+    try {
+        localStorage.setItem(armeriaSeenKey(characterId), String(level));
+    } catch {
+        // sin storage: el aviso vuelve a aparecer, no pasa nada grave
+    }
+}
+
 // Nivel actual del personaje. No se cachea: cambia al subir de nivel.
 // Sale de get-character-state, que ya lo devuelve.
 export async function getCharacterLevel() {

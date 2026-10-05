@@ -22,11 +22,18 @@ const KINDS = [
     { field: "debuffStats", kind: "debuff", mark: "↓" }
 ];
 
+// Lista de stats de una habilidad para un tipo. debuffStats también
+// incluye los de debuffPercent (Ceguera), que van dentro de un objeto.
+function statsOf(ab, field) {
+    if (field === "debuffStats") return [...(ab.debuffStats || []), ...(ab.debuffPercent?.stats || [])];
+    return ab[field] || [];
+}
+
 // ---------- Columnas: todos los stats que usa alguna habilidad ----------
 function collectStats() {
     const set = new Set();
     Object.values(ABILITIES).forEach(ab => {
-        KINDS.forEach(k => (ab[k.field] || []).forEach(st => set.add(st)));
+        KINDS.forEach(k => statsOf(ab, k.field).forEach(st => set.add(st)));
     });
     const equip = EQUIP_STATS.filter(st => set.has(st));
     const rest = [...set].filter(st => !EQUIP_STATS.includes(st)).sort((a, b) => a.localeCompare(b, "es"));
@@ -170,7 +177,7 @@ function build() {
             const markCells = [];
             STATS.forEach(st => {
                 const td = document.createElement("td");
-                const kind = KINDS.find(k => (ab[k.field] || []).includes(st));
+                const kind = KINDS.find(k => statsOf(ab, k.field).includes(st));
                 if (kind) {
                     td.className = `mark ${kind.kind}`;
                     td.textContent = kind.mark;

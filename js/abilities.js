@@ -54,6 +54,9 @@ export const ABILITIES = {
         name: "Daga Venenosa", range: 1, apCost: 2, cooldown: 0, needsTarget: true, targetType: "enemy",
         damageStats: ["Acrobacias", "Movilidad", "Ingenio", "Conocimiento", "Arma Melee"],
         onHitMoveGain: 1,
+        damageMultiplier: 1.2,
+        critChance: 0.15,
+        critMultiplier: 1.5,
         damageType: "veneno",
         desc: "Alcance 1 · Daño según Fuerza/Agresividad/Atletismo/Instinto · Si golpea, +1 de movimiento"
     },
@@ -86,6 +89,7 @@ export const ABILITIES = {
         name: "Disparo", range: 2, apCost: 2, cooldown: 0, needsTarget: true, targetType: "enemy",
         damageStats: ["Atletismo", "Reflejos", "Percepción", "Paciencia", "Arma Distancia"],
         damageType: "normal",
+        damageMultiplier: 1.1,
         desc: "Alcance 2 · Daño según Reflejos/Fuerza/Voluntad/Creatividad"
     },
     fireburst: {
@@ -237,7 +241,7 @@ export const ABILITIES = {
     freezeCold: {
         name: "Congelar", range: 2, apCost: 2, cooldown: 2, needsTarget: true, targetType: "enemy",
         damageStats: ["Afinidad mágica", "Autocontrol", "Concentración", "Creatividad", "Foco Magico"],
-        damageMultiplier: 0.9,
+        damageMultiplier: 1.3,
         damageType: "hielo",
         onHitApDrain: 1,
         fx: { projectile: "none" },
@@ -290,7 +294,7 @@ export const ABILITIES = {
     necroPunch: {
         name: "Puño Necrótico", range: 1, apCost: 2, cooldown: 0, needsTarget: true, targetType: "enemy",
         damageStats: ["Fuerza", "Espiritu", "Resiliencia", "Determinación", "Arma Melee"],
-        damageMultiplier: 1.2,
+        damageMultiplier: 1.4,
         damageType: "magic",
         desc: "Alcance 1 · Golpe necrótico"
     },
@@ -313,7 +317,7 @@ export const ABILITIES = {
     bubble: {
         name: "Burbuja", range: 2, apCost: 1, cooldown: 0, needsTarget: true, targetType: "enemy",
         damageStats: ["Agudeza mental", "Paciencia", "Espiritu", "Afinidad mágica", "Foco Magico"],
-        damageMultiplier: 1.15,
+        damageMultiplier: 0.8,
         damageType: "magic",
         fx: { projectile: "orb", arc: false },
         desc: "Alcance 2 · Daño según"
@@ -382,7 +386,7 @@ export const ABILITIES = {
         selfCentered: true,
         opponentsOnly: true,
         damageStats: ["Afinidad mágica", "Concentración", "Iniciativa", "Movilidad", "Foco Magico"],
-        damageMultiplier: 0.75,
+        damageMultiplier: 0.65,
         damageType: "magic",
         onHitApDrain: 1,
         fx: { projectile: "none" },
@@ -441,10 +445,52 @@ export const ABILITIES = {
         aoeRadius: 1,
         opponentsOnly: true,
         damageStats: ["Afinidad mágica", "Autocontrol", "Concentración", "Creatividad", "Foco Magico"],
-        damageMultiplier: 0.75,
+        damageMultiplier: 0.8,
         damageType: "hielo",
         onHitApDrain: 1,
         fx: { projectile: "none" },
         desc: "Alcance 3 · Explota en cruz (radio 1) · -1 PA a cada rival golpeado · CD 2"
+    },
+    // ---------- Familia darkForest (nivel 3) ----------
+    // Doom Pixie. Estallido de Fuego oscuro con +1 de alcance; solo daña a los rivales.
+    darkPulse: {
+        name: "Pulso Oscuro", range: 3, apCost: 2, cooldown: 2, needsTarget: true, targetType: "area",
+        aoeRadius: 1,
+        opponentsOnly: true,
+        damageStats: ["Inteligencia", "Sabiduría", "Autocontrol", "Determinación", "Foco Magico"],
+        damageMultiplier: 0.9,
+        damageType: "oscuro",
+        fx: { projectile: "orb", arc: true },
+        desc: "Alcance 3 · Explota en cruz (radio 1) · CD 2"
+    },
+    // Forest Hag. Saeta de Fuego de planta que además saca 1 PM.
+    vineLash: {
+        name: "Látigo de Lianas", range: 2, apCost: 2, cooldown: 2, needsTarget: true, targetType: "enemy",
+        damageStats: ["Afinidad mágica", "Agresividad", "Agudeza mental", "Percepción", "Foco Magico"],
+        damageMultiplier: 1.25,
+        damageType: "planta",
+        onHitMpDrain: 1,
+        fx: { projectile: "none" },
+        desc: "Alcance 2 · -1 PM al golpeado · CD 2"
+    },
+    // Forest Hag. Baja un porcentaje de stats durante el próximo turno del
+    // golpeado (debuffPercent, ver battle.js). No se acumula: se renueva.
+    blindness: {
+        name: "Ceguera", range: 3, apCost: 1, cooldown: 1, needsTarget: true, targetType: "enemy",
+        damageStats: ["Percepción", "Ingenio", "Agudeza mental", "Concentración", "Foco Magico"],
+        damageMultiplier: 0.2,
+        damageType: "oscuro",
+        debuffPercent: { stats: ["Foco Magico", "Arma Distancia"], percent: 0.25, turns: 1 },
+        fx: { projectile: "none" },
+        desc: "Alcance 3 · -25% Foco Mágico y Arma Distancia durante su próximo turno · CD 1"
+    },
+    // Fairy Shadow. Reemplaza a Toque Espectral en esta criatura.
+    spectralSlash: {
+        name: "Tajo Espectral", range: 1, apCost: 1, cooldown: 1, needsTarget: true, targetType: "enemy",
+        damageStats: ["Foco Magico", "Arma Melee", "Espiritu", "Inteligencia", "Resiliencia"],
+        damageMultiplier: 1.3,
+        damageType: "oscuro",
+        fx: { projectile: "none" },
+        desc: "Alcance 1 · CD 1"
     },
 };
