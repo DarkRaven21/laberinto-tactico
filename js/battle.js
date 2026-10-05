@@ -4,7 +4,7 @@ import { generateEncounter } from "./encounter.js";
 import { getProgress, finishCombat, advanceRoom, resetProgress } from "./progress.js";
 import { connectSoul, hasSoulSlot } from "./souls.js";
 import { PLAYER_CONFIG } from "./player.js";
-import { requireSession } from "./session.js";
+import { requireSession, clearSession } from "./session.js";
 import { BIOMES, pickBiome, decorateCells, cellArtFor } from "./biomes.js";
 import { setupFx, animateHit, animateHeal, animateAttackImpact, animateAreaImpact, fxAura } from "./fx.js";
 
@@ -978,7 +978,7 @@ async function tryMovePlayerTo(target) {
 
     state.busy = true;
     render();
-    await walkPath(u, path);
+    await safely(() => walkPath(u, path));
     addLog(`Jugador se mueve (${path.length} casilla${path.length > 1 ? 's' : ''}).`);
     state.busy = false;
     render();
@@ -992,8 +992,12 @@ async function selectCard(key) {
     if (u.cooldowns[key] > 0) return;
 
     if (!ab.needsTarget) {
+        // Usar una habilidad sin objetivo (Defender, Evasión…) cancela la
+        // que estaba marcada: si no, la zona quedaba pintada y se podía
+        // atacar después aunque ya no alcanzaran los PA.
+        state.selection = null;
         state.busy = true;
-        await castNoTarget(u, key, "Jugador");
+        await safely(() => castNoTarget(u, key, "Jugador"));
         state.busy = false;
         render();
         return;
@@ -1095,6 +1099,13 @@ async function handleCellClick(i) {
         const key = state.selection.ability;
         const ab = ABILITIES[key];
         const u = state.player;
+        // Segunda barrera: al elegir el objetivo se vuelve a chequear que
+        // alcancen los PA y que no esté en CD. Si no, se cancela la selección.
+        if (u.ap < ab.apCost || (u.cooldowns[key] || 0) > 0) {
+            state.selection = null;
+            render();
+            return;
+        }
         const inRange = inAbilityRange(u, i, ab);
         if (!inRange) return;
 
@@ -1104,7 +1115,7 @@ async function handleCellClick(i) {
             state.selection = null;
             state.busy = true;
             render();
-            await performAttack(u, target, key);
+            await safely(() => performAttack(u, target, key));
             state.busy = false;
             render();
             return;
@@ -1116,8 +1127,7 @@ async function handleCellClick(i) {
             state.selection = null;
             state.busy = true;
             render();
-            if (ab.buffType) await performAllyBuff(u, target, key);
-            else await performHeal(u, target, key);
+            await safely(() => ab.buffType ? performAllyBuff(u, target, key) : performHeal(u, target, key));
             state.busy = false;
             render();
             return;
@@ -1136,7 +1146,7 @@ async function handleCellClick(i) {
             renderBoard();
             renderSide();
             renderLog();
-            await triggerTrapIfAny(u, i);
+            await safely(() => triggerTrapIfAny(u, i));
             await sleep(100);
             state.busy = false;
             render();
@@ -1147,7 +1157,7 @@ async function handleCellClick(i) {
             state.selection = null;
             state.busy = true;
             render();
-            await performAreaAttack(u, i, key);
+            await safely(() => performAreaAttack(u, i, key));
             state.busy = false;
             render();
             return;
@@ -1159,7 +1169,7 @@ async function handleCellClick(i) {
             state.selection = null;
             state.busy = true;
             render();
-            await placeTrap(u, key, i);
+            await safely(() => placeTrap(u, key, i));
             state.busy = false;
             render();
             return;
@@ -1430,6 +1440,10 @@ function applyDamage(unit, rawDamage, damageType = "normal") {
 }
 
 async function checkGameOver() {
+    // Una sola vez por combate: si el último golpe dispara algo encadenado
+    // (Sangre Corrosiva, contraataque), checkGameOver se llama de nuevo y
+    // antes mandaba un segundo finish-combat en paralelo.
+    if (state.gameOver) return;
     if (state.player.hp <= 0) {
         state.gameOver = true;
         addLog("El jugador ha caído. Derrota.", "turn");
@@ -1451,54 +1465,102 @@ async function checkGameOver() {
         state.gameOver = true;
 
         addLog("Todos los enemigos han caído. Victoria.", "turn");
-
-        // El oro NO se calcula acá: se lo pedimos al servidor mandando
-        // qué criaturas murieron, y es la Edge Function la que decide
-        // cuánto vale eso (mirando creature_types), no un número que
-        // arma el cliente.
-        //
-        // Esperamos la respuesta (con el spinner global ya puesto
-        // encima, ver httpClient.js) ANTES de mostrar el cartel de
-        // victoria, y le pasamos el oro/XP ya confirmados para que
-        // salgan directo en el cartel. Antes se agregaban al log
-        // DESPUÉS de mostrar el overlay — que lo tapa por completo
-        // (position:fixed, inset:0) — así que ese mensaje nunca llegaba
-        // a pintarse en pantalla, más allá de qué tan rápido respondiera
-        // el server.
-        const defeatedKeys = state.enemies.map(e => e.type);
-        const { progress, goldGained, xpGained, level, leveledUp } = await finishCombat(defeatedKeys, state.player.hp);
-        currentProgress = progress;
-        state.player.maxHp = currentProgress.maxHp;
-        addLog(`Ganaste ${goldGained} de oro${xpGained > 0 ? ` y ${xpGained} de XP` : ""}.`, "turn");
-        if (leveledUp) {
-            addLog(`¡Subiste a nivel ${level}!`, "turn");
-        }
         renderLog();
+        await saveVictory();
+    }
+}
 
-        showOverlay(true, goldGained, xpGained, leveledUp, level);
+// ---------- Guardado de la victoria ----------
+// El cartel de Victoria aparece SIEMPRE. Si finish-combat falla (sesión
+// abierta en otro dispositivo, error del servidor, corte de red), en vez
+// de quedar el tablero congelado se muestra el aviso y el botón pasa a
+// "Reintentar" (o "Iniciar sesión" si la sesión ya no vale). El oro, la
+// XP y la tirada del alma llegan recién cuando el guardado sale bien.
+let victorySaved = false;
+let victorySaving = false;
+let victoryError = null; // null | "retry" | "session"
 
-        // Un solo tiro de 5% por combate ganado, sobre las criaturas que
-        // estuvieron presentes en ESTE combate (con repetición: si había
-        // 2 lobos y 1 goblin, el lobo tiene el doble de chances). Los
-        // bandidos NO dan alma (igual que no dan XP — solo oro), así
-        // que se los saca del todo del pool antes de tirar el dado: si
-        // el combate fue solo contra bandidos, ni se rifa. Si cae, el
-        // popup de alma reemplaza al click manual del botón de abajo —
-        // se resuelve solo y manda al laberinto.
+function setOverlayNote(text) {
+    overlaySubtitle.textContent = text;
+    overlaySubtitle.style.display = text ? "" : "none";
+}
+
+async function saveVictory() {
+    if (victorySaved || victorySaving) return;
+    victorySaving = true;
+    victoryError = null;
+    showOverlay(true);
+    setOverlayNote("Guardando el resultado…");
+    restartBtnEl.disabled = true;
+
+    // El oro NO se calcula acá: se manda qué criaturas murieron y la Edge
+    // Function decide cuánto vale (mirando creature_types).
+    const defeatedKeys = state.enemies.map(e => e.type);
+    let result;
+    try {
+        result = await finishCombat(defeatedKeys, state.player.hp);
+    } catch (err) {
+        console.error("[combate] No se pudo guardar la victoria:", err);
+        const sessionLost = /autorizado/i.test(err?.message || "");
+        victoryError = sessionLost ? "session" : "retry";
+        setOverlayNote(sessionLost
+            ? "Tu sesión se abrió en otro dispositivo, así que este combate no se pudo guardar. Volvé a iniciar sesión."
+            : "No se pudo guardar el resultado. Revisá tu conexión y probá de nuevo.");
+        restartBtnEl.textContent = sessionLost ? "Iniciar sesión" : "Reintentar";
+        restartBtnEl.disabled = false;
+        victorySaving = false;
+        return;
+    }
+
+    victorySaved = true;
+    victorySaving = false;
+    const { progress, goldGained, xpGained, level, leveledUp } = result;
+    currentProgress = progress;
+    state.player.maxHp = currentProgress.maxHp;
+    addLog(`Ganaste ${goldGained} de oro${xpGained > 0 ? ` y ${xpGained} de XP` : ""}.`, "turn");
+    if (leveledUp) {
+        addLog(`¡Subiste a nivel ${level}!`, "turn");
+    }
+    renderLog();
+
+    showOverlay(true, goldGained, xpGained, leveledUp, level);
+    restartBtnEl.disabled = false;
+
+    // Un solo tiro de 5% por combate ganado, sobre las criaturas que
+    // estuvieron presentes en ESTE combate (con repetición). Los bandidos
+    // no dan alma. Si no hay ranuras libres para el nivel (connect-soul.ts:
+    // 1 por nivel) se trata como si no hubiera caído nada.
+    try {
         const soulEligibleEnemies = state.enemies.filter(e => ENEMY_TYPES[e.type]?.family !== "bandidos");
         if (soulEligibleEnemies.length && Math.random() < SOUL_DROP_CHANCE) {
             const soulType = soulEligibleEnemies[Math.floor(Math.random() * soulEligibleEnemies.length)].type;
-            // Si no hay ranuras libres para el nivel actual (ver
-            // connect-soul.ts: 1 ranura por nivel), esto se trata como
-            // si no hubiera caído nada — nada de popup, nada de
-            // auto-avanzar. El jugador sigue con el botón manual
-            // "Volver al laberinto" de siempre, igual que el resto de
-            // las veces que no cae un alma. level/souls salen de
-            // PLAYER_CONFIG (ya cargados al entrar a la página, ver
-            // player.js) — no hace falta pedirlos de nuevo.
             if (hasSoulSlot(PLAYER_CONFIG.level, PLAYER_CONFIG.souls.length)) {
                 await handleSoulDrop(soulType);
             }
+        }
+    } catch (err) {
+        // El combate ya quedó guardado: si falla lo del alma, el jugador
+        // sigue con el botón de siempre.
+        console.error("[combate] Error con el alma:", err);
+        restartBtnEl.disabled = false;
+    }
+}
+
+// ---------- Red de seguridad ----------
+// Envuelve cada acción del combate. Si algo tira un error inesperado (una
+// animación, una pasiva, la IA), en vez de quedar el tablero trabado se
+// anota en la consola, se avisa en el registro y el combate sigue. Si con
+// eso ya terminó la pelea (todos los enemigos o el jugador en 0), se
+// dispara el final normal.
+async function safely(fn) {
+    try {
+        await fn();
+    } catch (err) {
+        console.error("[combate] Error inesperado:", err);
+        addLog("Hubo un error inesperado; el combate sigue.", "turn");
+        renderLog();
+        if (!state.gameOver && (state.player.hp <= 0 || livingEnemies().length === 0)) {
+            checkGameOver();
         }
     }
 }
@@ -1520,8 +1582,8 @@ async function endPlayerTurn() {
     state.busy = true;
     render();
 
-    await applyEndOfTurnRegen(state.player);
-    if (!state.gameOver) await applyEndOfTurnDamage(state.player);
+    await safely(() => applyEndOfTurnRegen(state.player));
+    if (!state.gameOver) await safely(() => applyEndOfTurnDamage(state.player));
     renderSide();
 
     if (state.gameOver) return; // ej: una pasiva lo dejó en 0 hp
@@ -1537,7 +1599,9 @@ async function runEnemyPhase() {
         if (enemy.hp <= 0) continue;
         state.actingUnit = enemy;
         renderBoard();
-        await runUnitAiTurn(enemy);
+        // Si el turno de un enemigo falla, se pasa al siguiente y el turno
+        // del jugador arranca igual (antes el combate quedaba trabado).
+        await safely(() => runUnitAiTurn(enemy));
         if (state.gameOver) break;
         await sleep(UNIT_TURN_GAP);
     }
@@ -2336,6 +2400,17 @@ document.getElementById("endTurnBtn").addEventListener("click", endPlayerTurn);
 const restartBtnEl = document.getElementById("restartBtn");
 restartBtnEl.addEventListener("click", async () => {
     if (lastGameWon) {
+        // La victoria todavía no se guardó: el botón es "Reintentar" o
+        // "Iniciar sesión" (ver saveVictory).
+        if (victoryError === "session") {
+            clearSession();
+            window.location.href = "index.html";
+            return;
+        }
+        if (!victorySaved) {
+            await saveVictory();
+            return;
+        }
         await advanceRoom();
         window.location.href = "laberinto.html";
     } else {
