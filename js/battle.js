@@ -527,6 +527,8 @@ async function animateLunge(fromPos, toPos) {
 
 // Resuelve un ataque completo: (carta, si es el jugador) -> empujón -> daño -> glow/número -> chequeo de victoria/derrota
 async function performAttack(attacker, target, key) {
+    // Una unidad muerta no actúa (ej: la mató una trampa al caminar).
+    if (attacker.hp <= 0) return;
     const ab = ABILITIES[key];
     attacker.ap -= ab.apCost;
     if (ab.cooldown) attacker.cooldowns[key] = ab.cooldown;
@@ -651,6 +653,8 @@ async function performAttack(attacker, target, key) {
 // No hay lunge (no tiene sentido "empujarse" hacia una explosión a
 // distancia); en su lugar todas las casillas afectadas flashean juntas.
 async function performAreaAttack(attacker, impactPos, key) {
+    // Una unidad muerta no actúa (ej: la mató una trampa al caminar).
+    if (attacker.hp <= 0) return;
     const ab = ABILITIES[key];
     attacker.ap -= ab.apCost;
     if (ab.cooldown) attacker.cooldowns[key] = ab.cooldown;
@@ -720,6 +724,8 @@ async function performAreaAttack(attacker, impactPos, key) {
 }
 
 async function performHeal(caster, target, key) {
+    // Una unidad muerta no actúa (ej: la mató una trampa al caminar).
+    if (caster.hp <= 0) return;
     const ab = ABILITIES[key];
     caster.ap -= ab.apCost;
     if (ab.cooldown) caster.cooldowns[key] = ab.cooldown;
@@ -753,6 +759,8 @@ async function performHeal(caster, target, key) {
 // turno, así que un ap += directo se perdería o llegaría tarde). Sobre
 // uno mismo: se suma al instante, porque ya está en pleno turno.
 async function performAllyBuff(caster, target, key) {
+    // Una unidad muerta no actúa (ej: la mató una trampa al caminar).
+    if (caster.hp <= 0) return;
     const ab = ABILITIES[key];
     caster.ap -= ab.apCost;
     if (ab.cooldown) caster.cooldowns[key] = ab.cooldown;
@@ -912,6 +920,8 @@ async function applyRetaliationIfAny(defender, attacker, dodged) {
 // activa después puede ser una unidad con otros stats totalmente
 // distintos, así que no tiene sentido recalcular en ese momento.
 async function placeTrap(caster, key, pos) {
+    // Una unidad muerta no actúa (ej: la mató una trampa al caminar).
+    if (caster.hp <= 0) return;
     const ab = ABILITIES[key];
     caster.ap -= ab.apCost;
     if (ab.cooldown) caster.cooldowns[key] = ab.cooldown;
@@ -1011,6 +1021,8 @@ async function selectCard(key) {
 }
 
 async function castNoTarget(caster, key, label) {
+    // Una unidad muerta no actúa (ej: la mató una trampa al caminar).
+    if (caster.hp <= 0) return;
     const ab = ABILITIES[key];
     caster.ap -= ab.apCost;
     if (ab.cooldown) caster.cooldowns[key] = ab.cooldown;
@@ -1643,7 +1655,9 @@ async function runUnitAiTurn(u) {
     let steps = 0;
     while (steps < 10) {
         steps++;
-        if (state.gameOver) break;
+        // Si murió en el paso anterior (una trampa al caminar, un
+        // contraataque…), el turno termina acá.
+        if (state.gameOver || u.hp <= 0) break;
         const distToP = manhattan(u.pos, p.pos);
 
         // El estilo "real" para decidir este paso: medic se comporta
@@ -1801,6 +1815,7 @@ async function runUnitAiTurn(u) {
                     const path = bfsPath(u.pos, bestCell, occupied);
                     if (path) {
                         await walkPath(u, path);
+                        if (u.hp <= 0) break;
                         addLog(`${u.label} se mueve hacia el jugador.`);
                         renderLog();
                         moved = true;
