@@ -4,6 +4,11 @@
 // Para sumar o cambiar una habilidad, se toca solo este archivo.
 // ============================================================
 
+// Escala de multiplicadores para habilidades de 2 PA (sesión 05/10):
+//   cuerpo a cuerpo 2.2 · cuerpo a cuerpo con efecto 2.0
+//   distancia 2.1 · distancia con efecto 1.9
+//   zona 1.75 · zona con efecto 1.6
+// Tiro Lejano (3 PA): 1.9.
 export const ABILITIES = {
     golpe: {
         name: "Golpe", range: 1, apCost: 1, cooldown: 0, needsTarget: true, targetType: "enemy",
@@ -54,7 +59,7 @@ export const ABILITIES = {
         name: "Daga Venenosa", range: 1, apCost: 2, cooldown: 0, needsTarget: true, targetType: "enemy",
         damageStats: ["Acrobacias", "Movilidad", "Ingenio", "Conocimiento", "Arma Melee"],
         onHitMoveGain: 1,
-        damageMultiplier: 1.2,
+        damageMultiplier: 2.0,
         critChance: 0.15,
         critMultiplier: 1.5,
         damageType: "veneno",
@@ -89,14 +94,14 @@ export const ABILITIES = {
         name: "Disparo", range: 2, apCost: 2, cooldown: 0, needsTarget: true, targetType: "enemy",
         damageStats: ["Atletismo", "Reflejos", "Percepción", "Paciencia", "Arma Distancia"],
         damageType: "normal",
-        damageMultiplier: 1.1,
+        damageMultiplier: 2.1,
         desc: "Alcance 2 · Daño según Reflejos/Fuerza/Voluntad/Creatividad"
     },
     fireburst: {
         name: "Estallido de Fuego", range: 2, apCost: 2, cooldown: 2, needsTarget: true, targetType: "area",
         aoeRadius: 1,
         damageStats: ["Inteligencia", "Sabiduría", "Autocontrol", "Determinación", "Foco Magico"],
-        damageMultiplier: 0.9,
+        damageMultiplier: 1.75,
         damageType: "fuego",
         fx: { projectile: "orb", arc: true },
         desc: "Alcance 2 · Explota en cruz (radio 1) · Daño según Inteligencia/Sabiduría/Autocontrol/Determinación x0.75 · CD 2"
@@ -104,7 +109,7 @@ export const ABILITIES = {
     firebolt: {
         name: "Saeta de Fuego", range: 2, apCost: 2, cooldown: 2, needsTarget: true, targetType: "enemy",
         damageStats: ["Afinidad mágica", "Agresividad", "Agudeza mental", "Percepción", "Foco Magico"],
-        damageMultiplier: 1.25,
+        damageMultiplier: 2.1,
         damageType: "fuego",
         desc: "Alcance 2 · Daño según Inteligencia/Sabiduría/Autocontrol/Determinación x0.75 · CD 2"
     },
@@ -183,7 +188,7 @@ export const ABILITIES = {
         name: "Tiro Lejano", range: 5, apCost: 3, cooldown: 2, needsTarget: true, targetType: "enemy",
         damageStats: ["Atletismo", "Mentalidad táctica", "Percepción", "Paciencia", "Arma Distancia"],
         damageType: "normal",
-        damageMultiplier: 1.75,
+        damageMultiplier: 1.9,
         desc: "Alcance 5 · Daño según Reflejos/Fuerza/Voluntad/Creatividad"
     },
     slash: {
@@ -241,7 +246,7 @@ export const ABILITIES = {
     freezeCold: {
         name: "Congelar", range: 2, apCost: 2, cooldown: 2, needsTarget: true, targetType: "enemy",
         damageStats: ["Afinidad mágica", "Autocontrol", "Concentración", "Creatividad", "Foco Magico"],
-        damageMultiplier: 1.3,
+        damageMultiplier: 1.9,
         damageType: "hielo",
         onHitApDrain: 1,
         fx: { projectile: "none" },
@@ -294,7 +299,7 @@ export const ABILITIES = {
     necroPunch: {
         name: "Puño Necrótico", range: 1, apCost: 2, cooldown: 0, needsTarget: true, targetType: "enemy",
         damageStats: ["Fuerza", "Espiritu", "Resiliencia", "Determinación", "Arma Melee"],
-        damageMultiplier: 1.4,
+        damageMultiplier: 2.2,
         damageType: "magic",
         desc: "Alcance 1 · Golpe necrótico"
     },
@@ -347,7 +352,7 @@ export const ABILITIES = {
         name: "Estallido de Lianas", range: 3, apCost: 2, cooldown: 2, needsTarget: true, targetType: "area",
         aoeRadius: 1,
         damageStats: ["Agudeza mental", "Concentración", "Confianza", "Impulsividad", "Afinidad mágica", "Foco Magico"],
-        damageMultiplier: 0.8,
+        damageMultiplier: 1.6,
         onHitMpDrain: 1,
         damageType: "magic",
         fx: { effect: "acid", projectile: "none" },
@@ -372,7 +377,7 @@ export const ABILITIES = {
         name: "Vómito Ácido", range: 2, apCost: 2, cooldown: 2, needsTarget: true, targetType: "enemy",
         damageStats: ["Capacidad pulmonar", "Resistencia", "Agresividad", "Terquedad", "Resiliencia"],
         damageType: "acido",
-        damageMultiplier: 1.3,
+        damageMultiplier: 2.1,
         desc: "Alcance 2 · Daño según"
     },
     // ---------- Familia dwarvenLaboratory (nivel 3) ----------
@@ -396,7 +401,7 @@ export const ABILITIES = {
     flamethrow: {
         name: "Lanzallamas", range: 2, apCost: 2, cooldown: 2, needsTarget: true, targetType: "enemy",
         damageStats: ["Inteligencia", "Impetu", "Autocontrol", "Determinación", "Foco Magico"],
-        damageMultiplier: 1.3,
+        damageMultiplier: 2.1,
         damageType: "fuego",
         fx: { projectile: "none" },
         desc: "Alcance 2 · Chorro de fuego · CD 2"
@@ -405,6 +410,7 @@ export const ABILITIES = {
     pulse: {
         name: "Pulso", range: 8, apCost: 2, cooldown: 1, needsTarget: true, targetType: "enemy",
         damageStats: ["Percepción", "Concentración", "Paciencia", "Arma Distancia", "Foco Magico"],
+        damageMultiplier: 2.1,
         damageType: "magic",
         fx: { projectile: "orb", arc: false },
         desc: "Alcance 8 · Pulso de energía · CD 1"
@@ -414,7 +420,7 @@ export const ABILITIES = {
     clap: {
         name: "Tenaza", range: 1, apCost: 2, cooldown: 1, needsTarget: true, targetType: "enemy",
         damageStats: ["Fuerza", "Fortaleza", "Terquedad", "Arma Melee"],
-        damageMultiplier: 1.8,
+        damageMultiplier: 2.0,
         damageType: "normal",
         onHitMpDrain: 1,
         fx: { projectile: "none" },
@@ -445,7 +451,7 @@ export const ABILITIES = {
         aoeRadius: 1,
         opponentsOnly: true,
         damageStats: ["Afinidad mágica", "Autocontrol", "Concentración", "Creatividad", "Foco Magico"],
-        damageMultiplier: 0.8,
+        damageMultiplier: 1.6,
         damageType: "hielo",
         onHitApDrain: 1,
         fx: { projectile: "none" },
@@ -458,7 +464,7 @@ export const ABILITIES = {
         aoeRadius: 1,
         opponentsOnly: true,
         damageStats: ["Inteligencia", "Sabiduría", "Autocontrol", "Determinación", "Foco Magico"],
-        damageMultiplier: 0.9,
+        damageMultiplier: 1.75,
         damageType: "oscuro",
         fx: { projectile: "orb", arc: true },
         desc: "Alcance 3 · Explota en cruz (radio 1) · CD 2"
@@ -467,7 +473,7 @@ export const ABILITIES = {
     vineLash: {
         name: "Látigo de Lianas", range: 2, apCost: 2, cooldown: 2, needsTarget: true, targetType: "enemy",
         damageStats: ["Afinidad mágica", "Agresividad", "Agudeza mental", "Percepción", "Foco Magico"],
-        damageMultiplier: 1.25,
+        damageMultiplier: 1.9,
         damageType: "planta",
         onHitMpDrain: 1,
         fx: { projectile: "none" },

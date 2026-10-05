@@ -153,7 +153,7 @@
        vuelve a aparecer el "Nuevo" en el tablón. data-title es lo
        que se ve en la tarjeta del tablón.
        ============================================================ -->
-  <div class="help-overlay" id="patchOverlay" data-version="2026-10-05" data-title="Parche del 5 de octubre">
+  <div class="help-overlay" id="patchOverlay" data-version="2026-10-05b" data-title="Parche del 5 de octubre">
     <div class="help-dialog" role="dialog" aria-modal="true" aria-labelledby="patchTitle">
       <div class="help-dialog-header">
         <h2 id="patchTitle">Notas del parche</h2>
@@ -162,23 +162,32 @@
 
       <div class="help-dialog-body">
         <p class="patch-date">5 de octubre</p>
-        <p>Estuvimos revisando las habilidades para que el daño esté más parejo según lo que cuesta cada una. Algunas suben, otras bajan.</p>
+        <p>Revisamos el daño de todas las habilidades. Las que cuestan 2 PA o más rendían mucho menos por cada PA que las de 1 PA: usar dos Golpes era mejor que casi cualquier hechizo caro. Ahora están a la par, así que gastar 2 PA en un solo ataque vale la pena.</p>
 
         <h3>Hechizos</h3>
         <ul class="patch-list">
+          <li><span class="patch-up">▲</span> <strong>Congelar</strong>: más del doble de daño (+111%). Sigue quitando 1 PA.</li>
+          <li><span class="patch-up">▲</span> <strong>Estallido de Lianas</strong>: más del doble de daño. Sigue quitando 1 PM.</li>
+          <li><span class="patch-up">▲</span> <strong>Estallido de Fuego</strong>: casi el doble de daño.</li>
+          <li><span class="patch-up">▲</span> <strong>Saeta de Fuego</strong>: mucho más daño (+68%).</li>
           <li><span class="patch-up">▲</span> <strong>Magia de Fuego</strong> y <strong>Magia de Hielo</strong>: un poco más de daño (+12%).</li>
-          <li><span class="patch-up">▲</span> <strong>Estallido de Fuego</strong>: más daño.</li>
-          <li><span class="patch-up">▲</span> <strong>Estallido de Lianas</strong>: más daño.</li>
-          <li><span class="patch-up">▲</span> <strong>Congelar</strong>: bastante más daño (+44%). Costaba 2 PA y pegaba muy poco para lo que valía.</li>
           <li><span class="patch-down">▼</span> <strong>Burbuja</strong>: menos daño (−30%). Pegaba mucho más que otros hechizos del mismo costo.</li>
           <li><span class="patch-down">▼</span> <strong>Potenciar</strong>: da bastante menos PA. Con mucho equipo mágico llegaba a dar hasta 5 PA por turno.</li>
         </ul>
 
         <h3>Ataques</h3>
         <ul class="patch-list">
-          <li><span class="patch-up">▲</span> <strong>Disparo</strong>: un poco más de daño (+10%).</li>
-          <li><span class="patch-up">▲</span> <strong>Daga Venenosa</strong>: más daño (+20%).</li>
-          <li><span class="patch-up">▲</span> <strong>Puño Necrótico</strong>: más daño (+17%).</li>
+          <li><span class="patch-up">▲</span> <strong>Disparo</strong>: más del doble de daño (+110%).</li>
+          <li><span class="patch-up">▲</span> <strong>Daga Venenosa</strong>: el doble de daño (+100%).</li>
+          <li><span class="patch-up">▲</span> <strong>Puño Necrótico</strong>: mucho más daño (+83%).</li>
+          <li><span class="patch-up">▲</span> <strong>Vómito Ácido</strong>: mucho más daño (+62%).</li>
+          <li><span class="patch-up">▲</span> <strong>Tiro Lejano</strong>: un poco más de daño (+9%).</li>
+        </ul>
+
+        <h3>Correcciones</h3>
+        <ul class="patch-list">
+          <li>Si marcabas un ataque y antes de elegir el objetivo usabas otra habilidad (por ejemplo Defender), podías atacar igual aunque ya no te quedaran PA. Ya no pasa.</li>
+          <li>A veces, al ganar un combate, el juego quedaba congelado sin mostrar el cartel de victoria. Ahora el cartel aparece siempre y, si no se puede guardar el resultado, te deja reintentar.</li>
         </ul>
 
         <p class="help-farewell">¡Nos vemos en el laberinto!</p>
