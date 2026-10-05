@@ -222,16 +222,196 @@
     min-height: 420px;
 }
 
-.ciudad-placeholder {
+/* ---------- Tablón de anuncios (ver ciudad-tablon.js) ---------- */
+
+.ciudad-tablon {
     flex: 1;
-    border: 1px dashed #262a33;
+}
+
+.tablon-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+    gap: 14px;
+    align-items: start;
+}
+
+.tablon-card {
+    background: var(--panel);
+    border: 1px solid #2c313b;
     border-radius: 8px;
+    padding: 14px;
     display: flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--text-dim);
+    flex-direction: column;
+    gap: 8px;
+}
+
+.tablon-card-label {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--amber);
+}
+
+.tablon-new-tag {
+    display: inline-block;
+    margin-left: 6px;
+    padding: 1px 6px;
+    border-radius: 4px;
+    background: var(--amber);
+    color: #1a1408;
+    font-size: 9px;
+    font-weight: 700;
+    vertical-align: middle;
+}
+
+.tablon-new-tag[hidden] {
+    display: none;
+}
+
+.tablon-patch-title {
     font-family: var(--sans);
-    font-size: 13px;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+}
+
+.tablon-patch-hint {
+    font-family: var(--sans);
+    font-size: 12px;
+    color: var(--text-dim);
+    flex: 1;
+}
+
+.tablon-patch .ciudad-event-buy-btn {
+    align-self: flex-start;
+}
+
+/* Leaderboard */
+.lb-wrap {
+    overflow-x: auto;
+}
+
+.lb-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: var(--sans);
+    font-size: 12.5px;
+}
+
+.lb-table th {
+    text-align: left;
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 400;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    padding: 4px 6px;
+    border-bottom: 1px solid #2c313b;
+}
+
+.lb-table td {
+    padding: 6px;
+    border-bottom: 1px solid #22262e;
+    color: var(--text);
+    white-space: nowrap;
+}
+
+.lb-table tr:last-child td {
+    border-bottom: none;
+}
+
+.lb-pos {
+    font-family: var(--mono);
+    color: var(--amber);
+    width: 24px;
+}
+
+.lb-name {
+    font-weight: 600;
+    white-space: normal;
+}
+
+.lb-class {
+    display: block;
+    font-weight: 400;
+    font-size: 11px;
+    color: var(--text-dim);
+}
+
+.lb-level,
+.lb-xp {
+    font-family: var(--mono);
+}
+
+.lb-xp {
+    color: var(--amber);
+}
+
+.lb-dead .lb-name,
+.lb-dead .lb-level,
+.lb-dead .lb-xp {
+    opacity: 0.55;
+}
+
+.lb-badge {
+    display: inline-block;
+    padding: 2px 7px;
+    border-radius: 4px;
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+}
+
+.lb-badge--alive {
+    color: var(--teal);
+    border: 1px solid var(--teal);
+}
+
+.lb-badge--dead {
+    color: var(--crimson);
+    border: 1px solid var(--crimson);
+}
+
+.lb-empty {
+    color: var(--text-dim) !important;
+    font-size: 12px;
+    text-align: center;
+    padding: 14px 6px !important;
+}
+
+/* Notas del parche (usa el mismo popup que la ayuda) */
+.help-dialog-body .patch-date {
+    margin-top: 12px;
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+}
+
+.patch-list {
+    margin: 0 0 8px;
+    padding-left: 4px;
+    list-style: none;
+    font-family: var(--sans);
+    font-size: 13.5px;
+    line-height: 1.6;
+    color: var(--text);
+}
+
+.patch-list li {
+    margin-bottom: 4px;
+}
+
+.patch-up {
+    color: var(--teal);
+}
+
+.patch-down {
+    color: var(--crimson);
 }
 
 .ciudad-events {
@@ -339,7 +519,8 @@
         flex: 1;
         justify-content: center;
     }
-    .ciudad-events-grid {
+    .ciudad-events-grid,
+    .tablon-grid {
         grid-template-columns: 1fr;
     }
 }
@@ -380,8 +561,11 @@
         min-height: 0;
         gap: 16px;
     }
-    .ciudad-placeholder {
-        min-height: 120px;
+    .lb-table {
+        font-size: 12px;
+    }
+    .patch-list {
+        font-size: 12.5px;
     }
     .ciudad-events-header {
         flex-direction: column;

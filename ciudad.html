@@ -6,9 +6,10 @@
   <title>Ciudad — Combate Táctico</title>
   <link rel="stylesheet" href="css/battle.css?ver=2026.10.05a">
   <link rel="stylesheet" href="css/laberinto.css?ver=2026.10.05a">
-  <link rel="stylesheet" href="css/ciudad.css?ver=2026.10.05a">
+  <link rel="stylesheet" href="css/ciudad.css?ver=2026.10.05b">
   <script type="module" src="js/ciudad.js?ver=2026.10.05a"></script>
   <script type="module" src="js/ciudad-ayuda.js?ver=2026.10.05a"></script>
+  <script type="module" src="js/ciudad-tablon.js?ver=2026.10.05a"></script>
 </head>
 <body class="laberinto-body">
   <div class="ciudad-page">
@@ -45,7 +46,37 @@
       </aside>
 
       <main class="ciudad-main">
-        <div class="ciudad-placeholder">— acá va el resto de la ciudad —</div>
+        <!-- Tablón de anuncios: notas del parche + mejores exploradores
+             (ver ciudad-tablon.js) -->
+        <section class="ciudad-tablon">
+          <div class="ciudad-events-header">
+            <h2>Tablón de anuncios</h2>
+          </div>
+          <div class="tablon-grid">
+
+            <div class="tablon-card tablon-patch">
+              <span class="tablon-card-label">Notas del parche <span class="tablon-new-tag" id="patchNewTag" hidden>Nuevo</span></span>
+              <span class="tablon-patch-title" id="patchCardTitle"></span>
+              <span class="tablon-patch-hint">Cambios en habilidades y hechizos.</span>
+              <button type="button" class="ciudad-event-buy-btn" id="patchOpenBtn">Leer</button>
+            </div>
+
+            <div class="tablon-card tablon-leaderboard">
+              <span class="tablon-card-label">Mejores exploradores</span>
+              <div class="lb-wrap">
+                <table class="lb-table">
+                  <thead>
+                    <tr><th>#</th><th>Explorador</th><th>Nivel</th><th>XP</th><th>Estado</th></tr>
+                  </thead>
+                  <tbody id="leaderboardBody">
+                    <tr><td colspan="5" class="lb-empty">Cargando…</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+          </div>
+        </section>
 
         <section class="ciudad-events">
           <div class="ciudad-events-header">
@@ -110,6 +141,51 @@
 
       <div class="help-dialog-footer">
         <button type="button" class="ciudad-nav-btn ciudad-nav-btn--primary" id="helpOkBtn">Entendido</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       NOTAS DEL PARCHE
+       Para publicar notas nuevas: reemplazá el contenido de
+       .help-dialog-body y cambiá data-version (cualquier texto nuevo,
+       por ejemplo la fecha). Al cambiar data-version, a todos les
+       vuelve a aparecer el "Nuevo" en el tablón. data-title es lo
+       que se ve en la tarjeta del tablón.
+       ============================================================ -->
+  <div class="help-overlay" id="patchOverlay" data-version="2026-10-05" data-title="Parche del 5 de octubre">
+    <div class="help-dialog" role="dialog" aria-modal="true" aria-labelledby="patchTitle">
+      <div class="help-dialog-header">
+        <h2 id="patchTitle">Notas del parche</h2>
+        <button type="button" class="help-close-btn" data-close-patch aria-label="Cerrar">×</button>
+      </div>
+
+      <div class="help-dialog-body">
+        <p class="patch-date">5 de octubre</p>
+        <p>Estuvimos revisando las habilidades para que el daño esté más parejo según lo que cuesta cada una. Algunas suben, otras bajan.</p>
+
+        <h3>Hechizos</h3>
+        <ul class="patch-list">
+          <li><span class="patch-up">▲</span> <strong>Magia de Fuego</strong> y <strong>Magia de Hielo</strong>: un poco más de daño (+12%).</li>
+          <li><span class="patch-up">▲</span> <strong>Estallido de Fuego</strong>: más daño.</li>
+          <li><span class="patch-up">▲</span> <strong>Estallido de Lianas</strong>: más daño.</li>
+          <li><span class="patch-up">▲</span> <strong>Congelar</strong>: bastante más daño (+44%). Costaba 2 PA y pegaba muy poco para lo que valía.</li>
+          <li><span class="patch-down">▼</span> <strong>Burbuja</strong>: menos daño (−30%). Pegaba mucho más que otros hechizos del mismo costo.</li>
+          <li><span class="patch-down">▼</span> <strong>Potenciar</strong>: da bastante menos PA. Con mucho equipo mágico llegaba a dar hasta 5 PA por turno.</li>
+        </ul>
+
+        <h3>Ataques</h3>
+        <ul class="patch-list">
+          <li><span class="patch-up">▲</span> <strong>Disparo</strong>: un poco más de daño (+10%).</li>
+          <li><span class="patch-up">▲</span> <strong>Daga Venenosa</strong>: más daño (+20%).</li>
+          <li><span class="patch-up">▲</span> <strong>Puño Necrótico</strong>: más daño (+17%).</li>
+        </ul>
+
+        <p class="help-farewell">¡Nos vemos en el laberinto!</p>
+      </div>
+
+      <div class="help-dialog-footer">
+        <button type="button" class="ciudad-nav-btn ciudad-nav-btn--primary" data-close-patch>Entendido</button>
       </div>
     </div>
   </div>
