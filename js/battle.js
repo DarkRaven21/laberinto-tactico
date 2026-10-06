@@ -105,6 +105,14 @@ const PASSIVES = {
         hpThreshold: 1,
         resourceBoosts: { move: 1 }
     },
+    // Cave Trol. Por debajo del 75% de vida, al final de su turno se cura
+    // max(1, floor(Regeneración / 4)) por cada PM que le quedó sin usar.
+    // Como toda pasiva, pasa al jugador con el alma.
+    trollRegen: {
+        name: "Regeneración de Trol",
+        hpThreshold: 0.75,
+        endOfTurnRegen: { stat: "Regeneración", divisor: 4, resource: "move" }
+    },
     hardToKill: {
         name: "Duro de Matar",
         lowHpHeal: { threshold: 0.3, stat: "Regeneración", divisor: 5 }
@@ -250,8 +258,10 @@ function defensiveFallbackAbilityOf(u) {
 function buffFallbackAbilityOf(u) {
     return u.abilities.find(key => {
         const ab = ABILITIES[key];
-        if (!ab.buffStats) return false;
+        // buffStats: Command. alliesNextTurnGrant: Inspirar (+PM a los aliados).
+        if (!ab.buffStats && !ab.alliesNextTurnGrant) return false;
         if (ab.needsTarget) return false; // Empower & co. tienen blanco: no son autobuffs tipo Command
+        if (ab.alliesNextTurnGrant && alliesOf(u).length === 0) return false; // sin aliados vivos no aporta
         if (u.ap < ab.apCost) return false;
         if (ab.cooldown && u.cooldowns[key] > 0) return false;
         return true;
@@ -1066,6 +1076,14 @@ async function castNoTarget(caster, key, label) {
             u.commandBonus = (u.commandBonus || 0) + bonus;
         });
         addLog(`${label} usa ${ab.name}. +${bonus} de daño para su bando hasta el próximo turno de cada uno.`);
+    } else if (ab.alliesNextTurnGrant) {
+        // Inspirar (Gnoll Captain): los aliados vivos reciben PM extra al
+        // arrancar su próximo turno (mismo moveBonusPending que usa el
+        // nextTurnGrant de Magic Shield). No incluye a quien lo lanza.
+        const extraMove = ab.alliesNextTurnGrant.move || 0;
+        const allies = alliesOf(caster);
+        allies.forEach(a => { a.moveBonusPending = (a.moveBonusPending || 0) + extraMove; });
+        addLog(`${label} usa ${ab.name}: +${extraMove} PM para ${allies.length} aliado(s) en su próximo turno.`);
     } else if (ab.resourceGrant) {
         // Genérico: a diferencia de onHitMoveGain (que depende de
         // conectar un golpe), esto se aplica siempre al castear, sin
@@ -1101,6 +1119,7 @@ async function castNoTarget(caster, key, label) {
     if (ab.reductionStats) fxAura(caster.pos, "shield");
     else if (ab.dodgeStats || ab.resourceGrant) fxAura(caster.pos, "dodge");
     else if (ab.buffStats) (ab.buffsAllies ? [caster, ...alliesOf(caster)] : [caster]).forEach(u => fxAura(u.pos, "buff"));
+    else if (ab.alliesNextTurnGrant) alliesOf(caster).forEach(u => fxAura(u.pos, "buff"));
     else if (ab.selfStatBoost) fxAura(caster.pos, "buff");
     await sleep(450);
 }
@@ -1364,7 +1383,7 @@ function passiveReductionOf(unit) {
 
 // Al final del turno de la unidad, cualquier pasiva que declare
 // endOfTurnRegen cura según su propio stat/divisor, multiplicado por
-// el PA que le quedó sin gastar. Mínimo 1 de cura por PA no usado
+// el PA (o PM, según 'resource') que le quedó sin gastar. Mínimo 1 de cura por PA no usado
 // (nunca 0, aunque el stat sea bajo) — pero si no le quedó PA sin
 // usar, el total sigue dando 0 igual.
 async function applyEndOfTurnRegen(unit) {
@@ -1378,9 +1397,11 @@ async function applyEndOfTurnRegen(unit) {
     for (const key of unit.passives) {
         const p = PASSIVES[key];
         if (!unit.passivesActive[key] || !p.endOfTurnRegen) continue;
-        const { stat, divisor } = p.endOfTurnRegen;
+        // resource: qué recurso sobrante multiplica la cura. Por defecto
+        // "ap" (Regeneración Gélida); "move" para la Regeneración de Trol.
+        const { stat, divisor, resource = "ap" } = p.endOfTurnRegen;
         const perAp = Math.max(1, Math.floor(effectiveStat(unit, stat) / divisor));
-        const heal = perAp * unit.ap;
+        const heal = perAp * Math.max(0, unit[resource] || 0);
         if (heal <= 0) continue;
         const before = unit.hp;
         unit.hp = Math.min(unit.maxHp, unit.hp + heal);
@@ -2229,6 +2250,8 @@ function cardMetaShort(u, key) {
         for (const [stat, pct] of Object.entries(ab.selfStatBoost)) {
             parts.push(`${stat} +${Math.round(pct * 100)}%`);
         }
+    } else if (ab.alliesNextTurnGrant) {
+        if (ab.alliesNextTurnGrant.move) parts.push(`+${ab.alliesNextTurnGrant.move} PM aliados`);
     } else if (ab.resourceGrant) {
         if (ab.resourceGrant.move) parts.push(`+${ab.resourceGrant.move} MOV`);
         if (ab.resourceGrant.ap) parts.push(`+${ab.resourceGrant.ap} PA`);

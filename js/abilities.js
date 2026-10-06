@@ -499,4 +499,50 @@ export const ABILITIES = {
         fx: { projectile: "none" },
         desc: "Alcance 1 · CD 1"
     },
+    // ---------- Familia ice (nivel 4) ----------
+    // Ice Elf / Ice Trol. Como Tiro Lejano pero de 1 PA y hielo:
+    // Afinidad mágica y Autocontrol en lugar de Atletismo y Mentalidad táctica.
+    iceShot: {
+        name: "Disparo de Hielo", range: 3, apCost: 1, cooldown: 1, needsTarget: true, targetType: "enemy",
+        damageStats: ["Afinidad mágica", "Autocontrol", "Percepción", "Paciencia", "Arma Distancia"],
+        damageType: "hielo",
+        fx: { projectile: "orb", arc: false },
+        desc: "Alcance 3 · CD 1"
+    },
+    // Ice Assassin. Si golpea, el blanco pierde 1 PA en su próximo turno.
+    coldSlash: {
+        name: "Tajo Gélido", range: 1, apCost: 1, cooldown: 1, needsTarget: true, targetType: "enemy",
+        damageStats: ["Acrobacias", "Reflejos", "Afinidad mágica", "Instinto", "Arma Melee"],
+        damageType: "hielo",
+        onHitApDrain: 1,
+        fx: { projectile: "none" },
+        desc: "Alcance 1 · Si golpea, el blanco pierde 1 PA en su próximo turno · CD 1"
+    },
+    // Ice Bear. Pega con Armadura en lugar de Arma Melee (3 PA, x2.5).
+    // Si golpea, el blanco pierde 2 PM en su próximo turno.
+    bodySlam: {
+        name: "Golpe de Cuerpo", range: 1, apCost: 3, cooldown: 2, needsTarget: true, targetType: "enemy",
+        damageStats: ["Fuerza", "Fortaleza", "Resistencia", "Atletismo", "Armadura"],
+        damageType: "normal",
+        damageMultiplier: 2.5,
+        onHitMpDrain: 2,
+        desc: "Alcance 1 · Si golpea, el blanco pierde 2 PM en su próximo turno · CD 2"
+    },
+    // ---------- Familia gnoll (nivel 4) ----------
+    // Gnoll Witch. 2 PA, sin CD, x2.2 (pedido de la persona).
+    bloodRot: {
+        name: "Sangre Podrida", range: 3, apCost: 2, cooldown: 0, needsTarget: true, targetType: "enemy",
+        damageStats: ["Afinidad mágica", "Sabiduría", "Determinación", "Agresividad", "Foco Magico"],
+        damageMultiplier: 2.2,
+        damageType: "oscuro",
+        fx: { projectile: "orb", arc: false },
+        desc: "Alcance 3"
+    },
+    // Gnoll Captain. +1 PM a todos los aliados vivos en su próximo turno
+    // (no a quien lo lanza). Ver alliesNextTurnGrant en castNoTarget.
+    inspire: {
+        name: "Inspirar", range: 0, apCost: 1, cooldown: 2, needsTarget: false,
+        alliesNextTurnGrant: { move: 1 },
+        desc: "Tus aliados ganan +1 PM en su próximo turno · CD 2"
+    },
 };

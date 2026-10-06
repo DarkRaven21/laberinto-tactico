@@ -6,13 +6,12 @@ import { ICON_COINS } from "./icons.js";
 import { CITY_EVENTS, buyEvent } from "./events.js";
 import { PLAYER_CONFIG } from "./player.js";
 
-// Tercera copia de esta fórmula (las otras dos viven en
-// progress-action.ts y set-lifestyle.ts) — acá es SOLO para mostrar
-// el número en el modal antes de confirmar. La validación real, la
-// que decide si el pago entra o el personaje muere, la hace siempre
-// set-lifestyle.ts del lado del server — esto nunca es la última
-// palabra, es una vista previa nomás.
 const TAX_INTERVAL = 6;
+// Inflación de comida y descanso: +25% compuesto cada 6 vueltas
+const INFLATION_RATE = 0.25;
+function inflatedPrice(base) {
+    return Math.round(base * Math.pow(1 + INFLATION_RATE, Math.floor(laberintoEntries / TAX_INTERVAL)));
+}
 const TAX_CAP = 1200;
 const TAX_MANUAL = { 1: 50, 2: 75, 3: 150 };
 const TAX_RATE = 0.9133;
@@ -326,7 +325,7 @@ function renderLifestyleOptions(options, container, onPick) {
         btn.type = "button";
         btn.className = "lifestyle-option-btn";
         btn.dataset.key = opt.key;
-        btn.innerHTML = `<span>${opt.label}</span><span class="lifestyle-option-price">${opt.price} ${ICON_COINS}</span>`;
+        btn.innerHTML = `<span>${opt.label}</span><span class="lifestyle-option-price">${inflatedPrice(opt.price)} ${ICON_COINS}</span>`;
         btn.addEventListener("click", () => onPick(opt.key));
         container.appendChild(btn);
     });
@@ -414,8 +413,8 @@ async function handleSellItem(slot) {
 }
 
 function currentTotalCost() {
-    const foodPrice = FOOD_OPTIONS.find(o => o.key === selectedFood)?.price ?? 0;
-    const sleepPrice = SLEEP_OPTIONS.find(o => o.key === selectedSleep)?.price ?? 0;
+    const foodPrice = inflatedPrice(FOOD_OPTIONS.find(o => o.key === selectedFood)?.price ?? 0);
+    const sleepPrice = inflatedPrice(SLEEP_OPTIONS.find(o => o.key === selectedSleep)?.price ?? 0);
     return foodPrice + sleepPrice + currentMaintenanceTotal() + (taxPending ? taxDue : 0);
 }
 
@@ -544,7 +543,7 @@ function renderEvents() {
 
         const already = usedEvents.includes(key);
         const price = evt.base_price;
-        const statsLine = (evt.stats || []).map(s => `+1 ${s}`).join(", ");
+        const statsLine = (evt.stats || []).map(s => `+3 ${s}`).join(", ");
 
         const slot = document.createElement("div");
         slot.className = "ciudad-event-slot";
@@ -568,7 +567,7 @@ function renderEvents() {
 
 async function handleBuyEvent(key, evt, price) {
     const statsLine = (evt.stats || []).join(", ");
-    const ok = confirm(`¿Participar de "${evt.label}" por ${price} de oro? Vas a subir +1 en: ${statsLine}.`);
+    const ok = confirm(`¿Participar de "${evt.label}" por ${price} de oro? Vas a subir +3 en: ${statsLine}.`);
     if (!ok) return;
 
     const result = await buyEvent(key);

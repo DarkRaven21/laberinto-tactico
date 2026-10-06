@@ -22,6 +22,31 @@ const XP_POOL_MIN_PER_LEVEL = 2;
 const XP_POOL_MAX_PER_LEVEL = 7;
 const MAX_CREATURES_BASE = 2; // + laberinto_level
 
+// Valores por nivel de laberinto. Los niveles 1 a 3 tienen exactamente
+// lo que daba la fórmula de arriba (no cambia nada de lo calibrado).
+// Desde el nivel 4 las criaturas cuestan más XP de lo que crece la
+// fórmula, así que cada nivel nuevo lleva sus propios números:
+//   xpMin / xpMax: rango del presupuesto de XP del camino.
+//   minCreatures:  mínimo garantizado (si el presupuesto no alcanza,
+//                  se completa con la criatura más barata de la familia).
+//   maxCreatures:  tope de criaturas por camino.
+// Los niveles que no figuran acá usan la fórmula (levelConfig).
+const LEVEL_CONFIG = {
+  1: { xpMin: 2,  xpMax: 7,  minCreatures: 1, maxCreatures: 3 },
+  2: { xpMin: 4,  xpMax: 14, minCreatures: 1, maxCreatures: 4 },
+  3: { xpMin: 6,  xpMax: 21, minCreatures: 1, maxCreatures: 5 },
+  4: { xpMin: 14, xpMax: 35, minCreatures: 2, maxCreatures: 5 },
+};
+
+function levelConfig(level) {
+  return LEVEL_CONFIG[level] ?? {
+    xpMin: XP_POOL_MIN_PER_LEVEL * level,
+    xpMax: XP_POOL_MAX_PER_LEVEL * level,
+    minCreatures: 1,
+    maxCreatures: MAX_CREATURES_BASE + level,
+  };
+}
+
 const MIX_CHANCE = 0.20;          // probabilidad de mezclar 2 familias
 const MAX_FAMILIES_WHEN_MIXED = 2;
 
@@ -68,10 +93,12 @@ export function generateEncounter(room = 1, level = 1) {
     return true;                                  // "normal"
   });
 
+  const cfg = levelConfig(level);
   const early = EARLY_ROOM_OVERRIDES[level]?.[room];
-  const xpPoolMax = early?.xpMax ?? XP_POOL_MAX_PER_LEVEL * level;
-  const xpPoolMin = Math.min(XP_POOL_MIN_PER_LEVEL * level, xpPoolMax);
-  const maxCreatures = early?.maxCreatures ?? MAX_CREATURES_BASE + level;
+  const xpPoolMax = early?.xpMax ?? cfg.xpMax;
+  const xpPoolMin = Math.min(cfg.xpMin, xpPoolMax);
+  const maxCreatures = early?.maxCreatures ?? cfg.maxCreatures;
+  const minCreatures = Math.min(cfg.minCreatures, maxCreatures);
 
   const pool = xpPoolMin + Math.floor(Math.random() * (xpPoolMax - xpPoolMin + 1));
 
@@ -98,12 +125,13 @@ export function generateEncounter(room = 1, level = 1) {
     remainingXp -= ENEMY_TYPES[pick].xp;
   }
 
-  // Salvavidas: si el pool era tan chico que no entró NADA, forzamos
-  // la criatura más barata de esas familias para no arrancar un
-  // combate vacío.
-  if (chosen.length === 0 && candidateKeys.length) {
+  // Mínimo de criaturas del nivel: si el presupuesto no alcanzó,
+  // completamos con la criatura más barata de las familias elegidas
+  // (aunque se pase un poco del presupuesto). Con mínimo 1 es el mismo
+  // salvavidas de antes: evita arrancar un combate vacío.
+  if (candidateKeys.length) {
     const cheapest = candidateKeys.reduce((a, b) => ENEMY_TYPES[a].xp <= ENEMY_TYPES[b].xp ? a : b);
-    chosen.push(cheapest);
+    while (chosen.length < minCreatures) chosen.push(cheapest);
   }
 
   return chosen;
