@@ -60,7 +60,7 @@ export async function animateHeal(pos, heal) {
 //   fx: { effect: "poison", projectile: "dart", arc: false }
 //
 //   effect     → look del impacto y color: slash, fire, ice, acid,
-//                poison, arcane, shadow, plant. Si falta, sale del damageType.
+//                poison, arcane, shadow, plant, electric. Si falta, sale del damageType.
 //   projectile → qué viaja cuando el ataque es a distancia:
 //                "arrow" (flecha fina), "dart" (dardo con estela),
 //                "orb" (bola) o "none" (sin proyectil, impacto directo).
@@ -80,11 +80,13 @@ const FX_BY_DAMAGE_TYPE = {
     veneno: "poison",
     magic: "arcane",
     oscuro: "shadow",
-    planta: "plant"
+    planta: "plant",
+    electric: "electric"
 };
 const FX_DEFAULT_PROJECTILE = {
     slash: "arrow",
-    acid: "orb"
+    acid: "orb",
+    electric: "none" // el rayo cae del cielo sobre el blanco, no viaja
     // el resto: "dart"
 };
 const FX_PROJECTILE_MS = 320;
@@ -182,6 +184,11 @@ function fxImpact(pos, kind) {
         // Mismo dibujo que arcano, con los colores oscuros (ver battle.css).
         fxEl(layer, "fx-arcane-ring");
         fxBurst(fxEl(layer, "fx-origin"), "fx-spark fx-shadow", 8, 25, 50, -6);
+    } else if (kind === "electric") {
+        // Rayo: cae desde arriba sobre la casilla, destello azul y chispas.
+        fxEl(layer, "fx-flash");
+        fxEl(layer, "fx-lightning");
+        fxBurst(fxEl(layer, "fx-origin"), "fx-spark fx-electric", 9, 22, 48, 4);
     } else if (kind === "plant") {
         // Latigazo: dos trazos verdes y hojas que saltan.
         fxEl(layer, "fx-streak", { "--r": "-20deg" });

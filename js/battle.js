@@ -86,6 +86,9 @@ function freshUnit(cfg) {
         // PLAYER_CONFIG / el caché de criaturas, y mutarla contaminaría
         // los combates siguientes. Un unit nuevo por combate = se limpia solo.
         statDebuffs: {},
+        // Subidas de stat que duran todo el combate (ej: Corte Furioso,
+        // onHitSelfStatGain). Mismo criterio que statDebuffs, al revés.
+        statBuffs: {},
         // Debuff porcentual temporal (ej: Ceguera): { stats: { stat: pct }, turnsLeft }.
         percentDebuffs: null,
         passives: cfg.passives || [],       // NUEVO
@@ -267,9 +270,9 @@ function buffFallbackAbilityOf(u) {
     return u.abilities.find(key => {
         const ab = ABILITIES[key];
         // buffStats: Command. alliesNextTurnGrant: Inspirar (+PM a los aliados).
-        if (!ab.buffStats && !ab.alliesNextTurnGrant) return false;
+        if (!ab.buffStats && !ab.alliesNextTurnGrant && !ab.apGrantAll) return false;
         if (ab.needsTarget) return false; // Empower & co. tienen blanco: no son autobuffs tipo Command
-        if (ab.alliesNextTurnGrant && alliesOf(u).length === 0) return false; // sin aliados vivos no aporta
+        if ((ab.alliesNextTurnGrant || ab.apGrantAll) && alliesOf(u).length === 0) return false; // sin aliados vivos no aporta
         if (u.ap < ab.apCost) return false;
         if (ab.cooldown && u.cooldowns[key] > 0) return false;
         return true;
@@ -669,6 +672,15 @@ async function performAttack(attacker, target, key) {
         ab.debuffPercent.stats.forEach(st => { stats[st] = ab.debuffPercent.percent; });
         target.percentDebuffs = { stats, turnsLeft: ab.debuffPercent.turns || 1 };
         addLog(`${tgtLabel} pierde ${Math.round(ab.debuffPercent.percent * 100)}% de ${ab.debuffPercent.stats.join(" y ")} en su próximo turno.`);
+    }
+
+    // Genérico: onHitSelfStatGain sube un stat de quien pega por el daño
+    // realmente hecho, hasta el final del combate (se acumula). Corte Furioso.
+    if (ab.onHitSelfStatGain && dmg > 0) {
+        const st = ab.onHitSelfStatGain;
+        attacker.statBuffs = attacker.statBuffs || {};
+        attacker.statBuffs[st] = (attacker.statBuffs[st] || 0) + dmg;
+        addLog(`${atkLabel} gana +${dmg} de ${st} hasta el final del combate (${ab.name}).`);
     }
 
     renderSide();
@@ -1108,6 +1120,14 @@ async function castNoTarget(caster, key, label) {
             u.commandBonus = (u.commandBonus || 0) + bonus;
         });
         addLog(`${label} usa ${ab.name}. +${bonus} de daño para su bando hasta el próximo turno de cada uno.`);
+    } else if (ab.apGrantAll) {
+        // Coraje: +PA ya mismo para quien lo lanza (está en pleno turno) y
+        // en el próximo turno de cada aliado vivo (apBonusPending, como Potenciar).
+        const n = ab.apGrantAll;
+        caster.ap += n;
+        const allies = alliesOf(caster);
+        allies.forEach(a => { a.apBonusPending = (a.apBonusPending || 0) + n; });
+        addLog(`${label} usa ${ab.name}: +${n} PA ya mismo y +${n} PA para ${allies.length} aliado(s) en su próximo turno.`);
     } else if (ab.alliesNextTurnGrant) {
         // Inspirar (Gnoll Captain): los aliados vivos reciben PM extra al
         // arrancar su próximo turno (mismo moveBonusPending que usa el
@@ -1153,6 +1173,7 @@ async function castNoTarget(caster, key, label) {
     else if (ab.dodgeStats || ab.resourceGrant) fxAura(caster.pos, "dodge");
     else if (ab.buffStats) (ab.buffsAllies ? [caster, ...alliesOf(caster)] : [caster]).forEach(u => fxAura(u.pos, "buff"));
     else if (ab.alliesNextTurnGrant) alliesOf(caster).forEach(u => fxAura(u.pos, "buff"));
+    else if (ab.apGrantAll) [caster, ...alliesOf(caster)].forEach(u => fxAura(u.pos, "buff"));
     else if (ab.selfStatBoost) fxAura(caster.pos, "buff");
     await sleep(450);
 }
@@ -1297,7 +1318,9 @@ function effectiveAiStyle(unit) {
 // `target` es opcional: solo lo pasan los cálculos de daño de un ataque
 // a un blanco puntual. Sin blanco, las pasivas con targetHpThreshold no cuentan.
 function effectiveStat(unit, statKey, target) {
-    let value = Math.max(0, (unit.stats[statKey] || 0) - ((unit.statDebuffs && unit.statDebuffs[statKey]) || 0));
+    let value = Math.max(0, (unit.stats[statKey] || 0)
+        + ((unit.statBuffs && unit.statBuffs[statKey]) || 0)
+        - ((unit.statDebuffs && unit.statDebuffs[statKey]) || 0));
     // Boost temporal de habilidades tipo Arcane Focus (selfStatBoost).
     if (unit.tempStatBoosts && unit.tempStatBoosts[statKey] != null) {
         value = value * (1 + unit.tempStatBoosts[statKey]);
@@ -2325,6 +2348,7 @@ function cardMetaShort(u, key) {
         if (ab.onHitMpDrain) parts.push(`-${ab.onHitMpDrain} PM`);
         if (ab.onHitApDrain) parts.push(`-${ab.onHitApDrain} PA`);
         if (ab.trapMoveLoss) parts.push(`-${ab.trapMoveLoss} PM`);
+        if (ab.onHitSelfStatGain) parts.push(`+${ab.onHitSelfStatGain}`);
     } else if (ab.reductionStats) {
         parts.push(`Reduce ${computeAbilityReduction(u, key)}`);
         if (ab.nextTurnGrant?.move) parts.push(`+${ab.nextTurnGrant.move} PM`);
@@ -2342,6 +2366,8 @@ function cardMetaShort(u, key) {
         for (const [stat, pct] of Object.entries(ab.selfStatBoost)) {
             parts.push(`${stat} +${Math.round(pct * 100)}%`);
         }
+    } else if (ab.apGrantAll) {
+        parts.push(`+${ab.apGrantAll} PA a todos`);
     } else if (ab.alliesNextTurnGrant) {
         if (ab.alliesNextTurnGrant.move) parts.push(`+${ab.alliesNextTurnGrant.move} PM aliados`);
     } else if (ab.resourceGrant) {
@@ -2392,7 +2418,8 @@ function renderHand() {
             const mpText = (ab.onHitMpDrain ? ` · -${ab.onHitMpDrain} PM al golpeado` : "")
                 + (ab.onHitApDrain ? ` · -${ab.onHitApDrain} PA al golpeado` : "");
             const critPct = ab.critChance ? Math.round(ab.critChance * 100) : 0;
-            const critText = critPct ? ` · ${critPct}% crítico (x${ab.critMultiplier || 1.5})` : "";
+            const critText = (critPct ? ` · ${critPct}% crítico (x${ab.critMultiplier || 1.5})` : "")
+                + (ab.onHitSelfStatGain ? ` · Ganás ${ab.onHitSelfStatGain} igual al daño hecho, todo el combate` : "");
             desc = `Alcance ${ab.range} · Daño ${dmgPreview}${critText}${aoeText}${pullText}${curseText}${mpText}`;
         } else if (ab.reductionStats) {
             const reducPreview = computeAbilityReduction(u, key);
@@ -2406,6 +2433,8 @@ function renderHand() {
         } else if (ab.buffStats) {
             const buffPreview = computeAbilityBuff(u, key);
             desc = `Aumenta tu daño y el de tus aliados en ${buffPreview} hasta tu próximo turno · CD ${ab.cooldown}`;
+        } else if (ab.apGrantAll) {
+            desc = `+${ab.apGrantAll} PA ya para vos y +${ab.apGrantAll} PA a tus aliados en su próximo turno · CD ${ab.cooldown}`;
         } else if (ab.healStats) {
             const healPreview = computeAbilityHeal(u, key);
             desc = `Alcance ${ab.range} · Cura ${healPreview}`;

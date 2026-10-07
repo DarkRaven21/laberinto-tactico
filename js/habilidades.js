@@ -61,6 +61,7 @@ function resultParts(ab) {
         if (ab.trapMoveLoss) parts.push(`-${ab.trapMoveLoss} PM`);
         if (ab.onHitMoveGain) parts.push(`+${ab.onHitMoveGain} PM si golpea`);
         if (ab.onHitLifesteal) parts.push("Te cura lo que pega");
+        if (ab.onHitSelfStatGain) parts.push(`Ganás ${ab.onHitSelfStatGain} igual al daño hecho, todo el combate`);
     }
     if (ab.reductionStats) {
         const red = Math.max(ab.reductionMin || 0, Math.floor(avg(ab.reductionStats) * (ab.reductionMultiplier ?? 1)));
@@ -85,6 +86,7 @@ function resultParts(ab) {
     if (ab.selfStatBoost) {
         for (const [st, pct] of Object.entries(ab.selfStatBoost)) parts.push(`${st} +${Math.round(pct * 100)}%`);
     }
+    if (ab.apGrantAll) parts.push(`+${ab.apGrantAll} PA ya para vos y +${ab.apGrantAll} PA a tus aliados en su próximo turno`);
     if (ab.alliesNextTurnGrant?.move) parts.push(`+${ab.alliesNextTurnGrant.move} PM a tus aliados`);
     if (ab.resourceGrant?.move) parts.push(`+${ab.resourceGrant.move} PM`);
     if (ab.resourceGrant?.ap) parts.push(`+${ab.resourceGrant.ap} PA`);

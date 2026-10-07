@@ -560,4 +560,68 @@ export const ABILITIES = {
         summon: "goblinWarrior",
         desc: "Invoca un Goblin Warrior a tu lado · CD 8"
     },
+    // Orc Ranger.
+    summonOldWolf: {
+        name: "Invocar Lobo Viejo", range: 0, apCost: 3, cooldown: 8, needsTarget: false,
+        summon: "oldWolf",
+        desc: "Invoca un Old Wolf a tu lado · CD 8"
+    },
+    // Orc Commander.
+    summonVulture: {
+        name: "Invocar Buitre", range: 0, apCost: 3, cooldown: 8, needsTarget: false,
+        summon: "vulture",
+        desc: "Invoca un Vulture a tu lado · CD 8"
+    },
+
+    // ---------- Familia orc (nivel 4) ----------
+    // Orc Marauder / Orc Warrior.
+    hack: {
+        name: "Hachazo", range: 1, apCost: 1, cooldown: 1, needsTarget: true, targetType: "enemy",
+        damageStats: ["Reflejos", "Agresividad", "Determinación", "Instinto", "Arma Melee"],
+        damageMultiplier: 1.1,
+        damageType: "normal",
+        desc: "Alcance 1 · CD 1"
+    },
+    // Orc Ranger.
+    preciseShot: {
+        name: "Golpe Certero", range: 3, apCost: 1, cooldown: 1, needsTarget: true, targetType: "enemy",
+        damageStats: ["Reflejos", "Agudeza mental", "Percepción", "Suerte", "Arma Distancia"],
+        damageMultiplier: 1.1,
+        damageType: "normal",
+        desc: "Alcance 3 · CD 1"
+    },
+    // Orc Shaman. Mismos stats y alcance que Curación Menor.
+    bigHeal: {
+        name: "Curación Mayor", range: 3, apCost: 3, cooldown: 3, needsTarget: true, targetType: "ally",
+        healStats: ["Sabiduría", "Conocimiento", "Espiritu", "Confianza", "Foco Magico"],
+        healMultiplier: 1.5,
+        desc: "Alcance 3 · Cura a un aliado · CD 3"
+    },
+    // Orc Shaman. Tipo "electric": sin entrada propia en FX_BY_DAMAGE_TYPE
+    // (fx.js) usa el efecto por defecto hasta que se le agregue uno.
+    lightning: {
+        name: "Relámpago", range: 3, apCost: 2, cooldown: 1, needsTarget: true, targetType: "enemy",
+        damageStats: ["Sabiduría", "Impulsividad", "Espiritu", "Instinto", "Foco Magico"],
+        damageMultiplier: 2.1,
+        damageType: "electric",
+        desc: "Alcance 3 · CD 1"
+    },
+    // Orc Warrior. onHitSelfStatGain: si el golpe hace daño, quien lo lanza
+    // gana ese stat por el daño hecho, hasta el final del combate (se
+    // acumula). Genérico: ver performAttack y statBuffs en battle.js.
+    furyCut: {
+        name: "Corte Furioso", range: 1, apCost: 1, cooldown: 1, needsTarget: true, targetType: "enemy",
+        damageStats: ["Fuerza", "Agresividad", "Impulsividad", "Voluntad", "Arma Melee"],
+        damageMultiplier: 0.9,
+        damageType: "normal",
+        onHitSelfStatGain: "Agresividad",
+        desc: "Alcance 1 · Ganás Agresividad igual al daño hecho, todo el combate · CD 1"
+    },
+    // Orc Commander. apGrantAll: +N PA ya mismo para quien lo lanza y +N PA
+    // en el próximo turno de cada aliado vivo. Ver castNoTarget.
+    courage: {
+        name: "Coraje", range: 0, apCost: 1, cooldown: 3, needsTarget: false,
+        apGrantAll: 1,
+        desc: "+1 PA ya para vos y +1 PA a tus aliados en su próximo turno · CD 3"
+    },
 };

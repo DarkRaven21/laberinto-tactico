@@ -868,6 +868,7 @@ svg.lucide-icon {
 .fx-arcane { --fx-light: #f3e6ff; --fx-main: #b98cff; --fx-dark: #6a3fc4; --fx-glow: rgba(185, 140, 255, 0.9); }
 .fx-shadow { --fx-light: #d9c8f0; --fx-main: #5b3f8a; --fx-dark: #1e1430; --fx-glow: rgba(70, 40, 120, 0.9); }
 .fx-plant  { --fx-light: #d8f5a8; --fx-main: #5fa83a; --fx-dark: #2f6b1f; --fx-glow: rgba(95, 168, 58, 0.8); }
+.fx-electric { --fx-light: #eaf6ff; --fx-main: #4da3ff; --fx-dark: #1f5fd1; --fx-glow: rgba(77, 163, 255, 0.95); }
 
 /* Formas del proyectil (campo fx.projectile de cada habilidad) */
 .fx-bolt.fx-shape-arrow {
@@ -947,6 +948,7 @@ svg.lucide-icon {
 .fx-blast.fx-poison { background: radial-gradient(circle, #e6d2f5 0, #b58ad8 35%, rgba(122, 79, 168, 0.55) 60%, transparent 76%); }
 .fx-blast.fx-shadow { background: radial-gradient(circle, #b9a3dc 0, #4a2f78 35%, rgba(20, 10, 35, 0.7) 60%, transparent 76%); }
 .fx-blast.fx-plant { background: radial-gradient(circle, #e2f8bf 0, #6fbf45 35%, rgba(47, 107, 31, 0.55) 60%, transparent 76%); }
+.fx-blast.fx-electric { background: radial-gradient(circle, #f2f9ff 0, #4da3ff 35%, rgba(31, 95, 209, 0.6) 60%, transparent 76%); }
 
 @keyframes fxQuake {
     0%, 100% { transform: none; }
@@ -979,6 +981,7 @@ svg.lucide-icon {
 .fx-spark.fx-poison { background: #c9a6e6; box-shadow: 0 0 6px #7a4fa8; }
 .fx-spark.fx-shadow { background: #3a2560; box-shadow: 0 0 6px #8a6ac4; }
 .fx-spark.fx-plant { background: #9ad86a; box-shadow: 0 0 6px #5fa83a; }
+.fx-spark.fx-electric { width: 4px; height: 4px; background: #eaf6ff; box-shadow: 0 0 6px #4da3ff, 0 0 2px #ffffff; }
 
 /* ---- Hielo ---- */
 @keyframes fxShard {
@@ -1052,6 +1055,41 @@ svg.lucide-icon {
 /* Oscuro y planta reusan formas de arcano y corte, con sus colores. */
 .fx-shadow .fx-arcane-ring { border-color: #7a5ab8; box-shadow: 0 0 12px rgba(20, 10, 35, 0.9), inset 0 0 8px rgba(91, 63, 138, 0.8); }
 .fx-plant .fx-streak { background: linear-gradient(90deg, transparent, #d8f5a8 35%, #5fa83a 65%, transparent); }
+
+/* ---- Rayo (eléctrico): cae desde arriba, parpadea y deja un destello ---- */
+@keyframes fxStrike {
+    0% { transform: scaleY(0.15); opacity: 0; }
+    12% { transform: scaleY(1); opacity: 1; }
+    28% { opacity: 0.25; }
+    40% { opacity: 1; }
+    100% { transform: scaleY(1); opacity: 0; }
+}
+.fx-lightning {
+    position: absolute;
+    left: calc(50% - 12px);
+    top: -56px;
+    width: 24px;
+    height: calc(50% + 56px);
+    background: linear-gradient(#ffffff, #9fd2ff 35%, #4da3ff 75%, #1f5fd1);
+    clip-path: polygon(58% 0, 18% 52%, 46% 52%, 26% 100%, 84% 42%, 55% 42%, 78% 0);
+    filter: drop-shadow(0 0 6px #4da3ff) drop-shadow(0 0 2px #ffffff);
+    transform-origin: 50% 0;
+    animation: fxStrike 0.5s ease-out both;
+}
+@keyframes fxFlash {
+    0% { opacity: 0; }
+    10% { opacity: 1; }
+    25% { opacity: 0.35; }
+    40% { opacity: 0.9; }
+    100% { opacity: 0; }
+}
+.fx-flash {
+    position: absolute;
+    inset: 0;
+    border-radius: 6px;
+    background: radial-gradient(circle, rgba(234, 246, 255, 0.85) 0, rgba(77, 163, 255, 0.45) 45%, transparent 76%);
+    animation: fxFlash 0.55s ease-out both;
+}
 
 /* ---- Curación ---- */
 .fx-heal-glow {
@@ -1138,6 +1176,9 @@ svg.lucide-icon {
     .board-wrap.fx-quake,
     .unit-token.fx-hurt,
     .unit-token.fx-dodge { animation: none; }
+    /* Rayo sin parpadeo: aparece y se desvanece */
+    .fx-lightning,
+    .fx-flash { animation: fxFade 0.5s ease-out both; }
 }
 
 /* ---- Pantallas angostas (celular): el panel lateral baja debajo del
