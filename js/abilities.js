@@ -545,4 +545,19 @@ export const ABILITIES = {
         alliesNextTurnGrant: { move: 1 },
         desc: "Tus aliados ganan +1 PM en su próximo turno · CD 2"
     },
+    // Invocaciones. `summon` es la key de creature_types de la criatura que
+    // aparece (en una casilla libre pegada a quien la usa, de su bando).
+    // Para otra invocación: copiar esta entrada y cambiar summon/name.
+    // Los invocados no dan oro, XP ni alma. Ver spawnSummon en battle.js.
+    summonYoungWolf: {
+        name: "Invocar Lobo Joven", range: 0, apCost: 3, cooldown: 8, needsTarget: false,
+        summon: "youngWolf",
+        desc: "Invoca un Young Wolf a tu lado · CD 8"
+    },
+    // Hobgoblin Commander.
+    summonGoblinWarrior: {
+        name: "Invocar Guerrero Goblin", range: 0, apCost: 3, cooldown: 8, needsTarget: false,
+        summon: "goblinWarrior",
+        desc: "Invoca un Goblin Warrior a tu lado · CD 8"
+    },
 };

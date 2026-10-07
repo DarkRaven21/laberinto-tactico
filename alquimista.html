@@ -3,18 +3,25 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Armería — Combate Táctico</title>
+  <title>Alquimista — Combate Táctico</title>
   <link rel="stylesheet" href="css/battle.css?ver=2026.10.05a">
   <link rel="stylesheet" href="css/laberinto.css?ver=2026.10.05a">
   <link rel="stylesheet" href="css/armeria.css?ver=2026.10.05b">
-  <script type="module" src="js/armeria.js?ver=2026.10.07a"></script>
+  <link rel="stylesheet" href="css/alquimista.css?ver=2026.10.07b">
+  <script type="module" src="js/alquimista.js?ver=2026.10.07b"></script>
 </head>
 <body class="laberinto-body">
-  <h1>Armería</h1>
+  <h1>Alquimista</h1>
   <div class="subtitle" id="goldLabel">Oro: 0 <svg class="lucide-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="8" r="6"/><path d="M18.09 10.37A6 6 0 1 1 10.34 18"/><path d="M7 6h1v4"/><path d="m16.71 13.88.7.71-2.82 2.82"/></svg></div>
 
+  <!-- Reusa el layout y las cartas de la armería (armeria.css);
+       alquimista.css solo agrega lo propio. -->
   <div class="armeria-wrap">
-    <div class="armeria-slots" id="armeriaSlots"></div>
+    <section class="armeria-slot-section">
+      <h3>Almas conectadas</h3>
+      <div class="armeria-current" id="alquimistaSlots">Cargando…</div>
+      <div class="armeria-item-list" id="alquimistaSouls"></div>
+    </section>
 
     <button class="rest-btn" id="backBtn">Volver a la ciudad</button>
   </div>

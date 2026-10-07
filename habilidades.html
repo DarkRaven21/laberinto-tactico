@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Habilidades — Combate Táctico</title>
+  <link rel="stylesheet" href="css/battle.css?ver=2026.10.05a">
+  <link rel="stylesheet" href="css/laberinto.css?ver=2026.10.05a">
+  <link rel="stylesheet" href="css/armeria.css?ver=2026.10.05b">
+  <link rel="stylesheet" href="css/alquimista.css?ver=2026.10.07b">
+  <link rel="stylesheet" href="css/habilidades.css?ver=2026.10.07a">
+  <script type="module" src="js/habilidades.js?ver=2026.10.07b"></script>
+</head>
+<body class="laberinto-body">
+  <h1>Habilidades</h1>
+
+  <!-- Reusa las cartas de la armería (armeria.css) y las filas de stats
+       del alquimista (alquimista.css); habilidades.css agrega el
+       interruptor y lo propio de esta página. -->
+  <div class="armeria-wrap">
+    <section class="armeria-slot-section">
+      <h3>Tus habilidades</h3>
+      <div class="armeria-current" id="habilidadesSummary">Cargando…</div>
+      <div class="armeria-item-list" id="habilidadesList"></div>
+    </section>
+
+    <button class="rest-btn" id="backBtn">Volver a la ciudad</button>
+  </div>
+</body>
+</html>

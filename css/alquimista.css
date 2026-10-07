@@ -1,0 +1,109 @@
+/* Alquimista: reusa armeria.css (grilla, cartas, botón). Esto solo
+   agrega lo propio de las cartas de almas. */
+
+.alquimista-soul-card {
+    border-color: #3a2f4a; /* tono violeta suave: es un alma, no un ítem */
+}
+
+.alquimista-soul-icon {
+    width: 22px;
+    height: 22px;
+    object-fit: contain;
+    vertical-align: middle;
+    margin-right: 6px;
+}
+
+.alquimista-soul-total {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text);
+}
+
+/* Desconectar es una acción destructiva: botón con borde, no relleno */
+.alquimista-disconnect-btn:not(:disabled) {
+    background: transparent;
+    color: var(--amber);
+    border: 1px solid var(--amber);
+}
+
+.alquimista-disconnect-btn:not(:disabled):hover {
+    background: var(--amber);
+    color: #1a1408;
+    filter: none;
+}
+
+/* Aviso de oro insuficiente: ocupa toda la fila de la grilla */
+.alquimista-note {
+    grid-column: 1 / -1;
+    font-family: var(--sans);
+    font-size: 12px;
+    color: var(--text-dim);
+}
+
+/* Lista de stats: una fila por stat */
+.alquimista-stat-list {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.alquimista-stat-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 2px 0;
+    border-bottom: 1px solid #262a33;
+    font-family: var(--sans);
+    font-size: 12px;
+    color: var(--text-dim);
+}
+
+.alquimista-stat-row:last-child {
+    border-bottom: none;
+}
+
+.alquimista-stat-value {
+    font-family: var(--mono);
+    color: var(--text);
+}
+
+/* Habilidades y pasivas: título chico y una línea por cada una */
+.alquimista-grant-group {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.alquimista-grant-title {
+    font-family: var(--sans);
+    font-size: 11px;
+    color: var(--text-dim);
+}
+
+.alquimista-grant {
+    font-family: var(--mono);
+    font-size: 11px;
+    padding: 3px 8px;
+    border-radius: 4px;
+    border-left: 2px solid currentColor;
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.alquimista-grant--ability {
+    color: var(--teal);
+}
+
+.alquimista-grant--passive {
+    color: var(--amber);
+}
+
+@media (max-width: 600px) {
+    .alquimista-soul-total,
+    .alquimista-grant,
+    .alquimista-grant-title {
+        font-size: 10px;
+    }
+    .alquimista-stat-row {
+        font-size: 11px;
+    }
+}

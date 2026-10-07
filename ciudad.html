@@ -7,7 +7,7 @@
   <link rel="stylesheet" href="css/battle.css?ver=2026.10.05a">
   <link rel="stylesheet" href="css/laberinto.css?ver=2026.10.05a">
   <link rel="stylesheet" href="css/ciudad.css?ver=2026.10.05b">
-  <script type="module" src="js/ciudad.js?ver=2026.10.05a"></script>
+  <script type="module" src="js/ciudad.js?ver=2026.10.07c"></script>
   <script type="module" src="js/ciudad-ayuda.js?ver=2026.10.05a"></script>
   <script type="module" src="js/ciudad-tablon.js?ver=2026.10.05a"></script>
 </head>
@@ -40,6 +40,8 @@
 
         <nav class="ciudad-nav">
           <button type="button" class="ciudad-nav-btn" id="goToArmeriaBtn">Armería</button>
+          <button type="button" class="ciudad-nav-btn" id="goToAlquimistaBtn">Alquimista</button>
+          <button type="button" class="ciudad-nav-btn" id="goToHabilidadesBtn">Habilidades</button>
           <button type="button" class="ciudad-nav-btn ciudad-nav-btn--primary" id="goToLaberintoBtn">Ir al laberinto</button>
           <button type="button" class="ciudad-nav-btn ciudad-nav-btn--ghost" id="logoutBtn">Cerrar sesión</button>
         </nav>
@@ -154,7 +156,7 @@
        vuelve a aparecer el "Nuevo" en el tablón. data-title es lo
        que se ve en la tarjeta del tablón.
        ============================================================ -->
-  <div class="help-overlay" id="patchOverlay" data-version="2026-10-05b" data-title="Parche del 5 de octubre">
+  <div class="help-overlay" id="patchOverlay" data-version="2026-10-07a" data-title="Parche del 7 de octubre">
     <div class="help-dialog" role="dialog" aria-modal="true" aria-labelledby="patchTitle">
       <div class="help-dialog-header">
         <h2 id="patchTitle">Notas del parche</h2>
@@ -162,33 +164,32 @@
       </div>
 
       <div class="help-dialog-body">
-        <p class="patch-date">5 de octubre</p>
-        <p>Revisamos el daño de todas las habilidades. Las que cuestan 2 PA o más rendían mucho menos por cada PA que las de 1 PA: usar dos Golpes era mejor que casi cualquier hechizo caro. Ahora están a la par, así que gastar 2 PA en un solo ataque vale la pena.</p>
+        <p class="patch-date">7 de octubre</p>
+        <p>Llegan dos lugares nuevos a la ciudad, las invocaciones y algunas mejoras para que no pierdas el hilo de tus corridas.</p>
 
-        <h3>Hechizos</h3>
+        <h3>Ciudad</h3>
         <ul class="patch-list">
-          <li><span class="patch-up">▲</span> <strong>Congelar</strong>: más del doble de daño (+111%). Sigue quitando 1 PA.</li>
-          <li><span class="patch-up">▲</span> <strong>Estallido de Lianas</strong>: más del doble de daño. Sigue quitando 1 PM.</li>
-          <li><span class="patch-up">▲</span> <strong>Estallido de Fuego</strong>: casi el doble de daño.</li>
-          <li><span class="patch-up">▲</span> <strong>Saeta de Fuego</strong>: mucho más daño (+68%).</li>
-          <li><span class="patch-up">▲</span> <strong>Magia de Fuego</strong> y <strong>Magia de Hielo</strong>: un poco más de daño (+12%).</li>
-          <li><span class="patch-down">▼</span> <strong>Burbuja</strong>: menos daño (−30%). Pegaba mucho más que otros hechizos del mismo costo.</li>
-          <li><span class="patch-down">▼</span> <strong>Potenciar</strong>: da bastante menos PA. Con mucho equipo mágico llegaba a dar hasta 5 PA por turno.</li>
+          <li><strong>Alquimista</strong>: muestra las almas que tenés conectadas, con todo lo que te da cada una: atributos, habilidades y pasivas. Por 100 de oro separa un alma de tu personaje y libera la ranura para conseguir otra. El alma se pierde para siempre.</li>
+          <li><strong>Habilidades</strong>: lista todas tus habilidades con los atributos que usan y cuánto pegan, curan o protegen con tus números actuales. Podés desactivar las que no uses para que no ocupen lugar en el combate. Se guarda por dispositivo, así que en el celular podés tener menos cartas que en la PC.</li>
+          <li><strong>Armería</strong>: las pasivas de los ítems ahora se ven con su nombre.</li>
         </ul>
 
-        <h3>Ataques</h3>
+        <h3>Laberinto</h3>
         <ul class="patch-list">
-          <li><span class="patch-up">▲</span> <strong>Disparo</strong>: más del doble de daño (+110%).</li>
-          <li><span class="patch-up">▲</span> <strong>Daga Venenosa</strong>: el doble de daño (+100%).</li>
-          <li><span class="patch-up">▲</span> <strong>Puño Necrótico</strong>: mucho más daño (+83%).</li>
-          <li><span class="patch-up">▲</span> <strong>Vómito Ácido</strong>: mucho más daño (+62%).</li>
-          <li><span class="patch-up">▲</span> <strong>Tiro Lejano</strong>: un poco más de daño (+9%).</li>
+          <li>Si salís a mitad de una corrida y volvés a entrar, aunque sea desde otro dispositivo, el juego te lleva directo a la sala donde quedaste.</li>
+          <li>Las tarjetas de los caminos ahora muestran la XP real: solo la de criaturas que todavía no mataste, y una sola vez por tipo. También muestran el oro que da cada pelea.</li>
         </ul>
 
-        <h3>Correcciones</h3>
+        <h3>Invocaciones</h3>
         <ul class="patch-list">
-          <li>Si marcabas un ataque y antes de elegir el objetivo usabas otra habilidad (por ejemplo Defender), podías atacar igual aunque ya no te quedaran PA. Ya no pasa.</li>
-          <li>A veces, al ganar un combate, el juego quedaba congelado sin mostrar el cartel de victoria. Ahora el cartel aparece siempre y, si no se puede guardar el resultado, te deja reintentar.</li>
+          <li>Algunas criaturas pueden invocar aliados en pleno combate. El invocado aparece al lado de quien lo llama y actúa en esa misma ronda.</li>
+          <li>Para ganar tenés que vencer también a los invocados, pero no dan oro, ni experiencia, ni alma.</li>
+          <li>Si conectás el alma de una criatura que invoca, la habilidad es tuya. Tu invocado pelea solo, juega después de tu turno y tus curas y mejoras lo cuentan como aliado. Si caés, perdés aunque tu invocado siga en pie.</li>
+        </ul>
+
+        <h3>Criaturas</h3>
+        <ul class="patch-list">
+          <li><strong>Hobgoblin Commander</strong>: Se le agrega una habilidad de invocación.</li>
         </ul>
 
         <p class="help-farewell">¡Nos vemos en el laberinto!</p>

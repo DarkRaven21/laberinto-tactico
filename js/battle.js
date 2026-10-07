@@ -1,10 +1,12 @@
 import { ENEMY_TYPES } from "./enemies.js";
 import { ABILITIES } from "./abilities.js";
+import { PASSIVES } from "./passives.js";
 import { generateEncounter } from "./encounter.js";
 import { getProgress, finishCombat, advanceRoom, resetProgress } from "./progress.js";
 import { connectSoul, hasSoulSlot } from "./souls.js";
 import { PLAYER_CONFIG } from "./player.js";
-import { requireSession, clearSession } from "./session.js";
+import { requireSession, clearSession, getSession } from "./session.js";
+import { getHiddenAbilities, visibleAbilities } from "./ability-prefs.js";
 import { BIOMES, pickBiome, decorateCells, cellArtFor } from "./biomes.js";
 import { setupFx, animateHit, animateHeal, animateAttackImpact, animateAreaImpact, fxAura } from "./fx.js";
 
@@ -44,93 +46,7 @@ function applyBiome(biomeKey) {
 
 // ABILITIES vive en abilities.js (lo comparte con la página admin).
 
-const PASSIVES = {
-    furiaSangre: {
-        name: "Furia de Sangre",
-        hpThreshold: 0.5, // se activa con hp/maxHp <= 0.5
-        statBoosts: { "Agresividad": 0.25, "Fuerza": 0.25, "Instinto": 0.25 }
-    },
-    injured: {
-        name: "Herido",
-        hpThreshold: 0.5,
-        resourceBoosts: { move: 1 },
-        aiStyleOverride: "escurridizo"   // mientras esté activa, la IA se comporta como escurridiza
-    },
-    lastStand: {
-        name: "Última Resistencia",
-        hpThreshold: 0.5,
-        resourceBoosts: { ap: 1 }
-    },
-    frostRegen: {
-        name: "Regeneración Gélida",
-        hpThreshold: 0.5,
-        endOfTurnRegen: { stat: "Regeneración", divisor: 20 },
-        aiStyleOverride: "elusive"
-    },
-    thickSkin: {
-        name: "Piel Gruesa",
-        hpThreshold: 0.5,
-        passiveReduction: { stats: ["Resistencia", "Sensibilidad al dolor", "Entereza", "Voluntad"], divisor: 4 }
-    },
-    inPain: {
-        name: "En Agonía",
-        hpThreshold: 1,
-        endOfTurnDamage: { stat: "Regeneración", divisor: 10 }
-        //Esto en realidad tiene que hacerle daño a la criatura al final de su turno por valor igual a regeneracion / 10 (minimo 1), redondea hacia abajo
-    },
-    bloodthirst: {
-        name: "Sed de Sangre",
-        // A diferencia de hpThreshold (vida de la PROPIA unidad, se guarda en
-        // passivesActive), targetHpThreshold mira la vida del BLANCO y se
-        // evalúa en el momento de calcular el daño: los statBoosts solo
-        // cuentan contra un objetivo con hp/maxHp <= 0.5. Ver effectiveStat.
-        targetHpThreshold: 0.5,
-        statBoosts: { "Atletismo": 0.3, "Percepción": 0.3, "Instinto": 0.3 }
-    },
-    incorporeal: {
-        name: "Incorpóreo",
-        hpThreshold: 1, // siempre activa
-        // Esquiva pasiva: probabilidad (0-1) de esquivar TODO el daño de
-        // un golpe, sin gastar PA. Genérico: cualquier pasiva que declare
-        // elusiveness la suma (ver passiveDodgeChanceOf / applyDamage).
-        elusiveness: 0.05
-    },
-    // Sand Statue. Al recibir daño real y quedar viva por debajo del 30%,
-    // se cura en ese mismo golpe max(1, floor(Regeneración / 5)). Si el
-    // golpe la mata, no se cura. Ver applyLowHpHealIfAny.
-    // Swarm. +1 PM siempre (hpThreshold 1 = siempre activa). Como toda
-    // pasiva, pasa al jugador con el alma.
-    flutter: {
-        name: "Revoloteo",
-        hpThreshold: 1,
-        resourceBoosts: { move: 1 }
-    },
-    // Cave Trol. Por debajo del 75% de vida, al final de su turno se cura
-    // max(1, floor(Regeneración / 4)) por cada PM que le quedó sin usar.
-    // Como toda pasiva, pasa al jugador con el alma.
-    trollRegen: {
-        name: "Regeneración de Trol",
-        hpThreshold: 0.75,
-        endOfTurnRegen: { stat: "Regeneración", divisor: 4, resource: "move" }
-    },
-    hardToKill: {
-        name: "Duro de Matar",
-        lowHpHeal: { threshold: 0.3, stat: "Regeneración", divisor: 5 }
-    },
-    corrosiveBlood: {
-        name: "Sangre Corrosiva",
-        hpThreshold: 1, // siempre activa
-        // Daño de vuelta al atacante cada vez que esta unidad recibe un
-        // golpe que le hace daño real (no esquivado, dmg > 0).
-        // Genérico: cualquier pasiva que declare damageStats funciona así
-        // (ver applyOnHitPassivesIfAny). Daño = floor(promedio × mult), mínimo 1.
-        damageMultiplier: 0.4,
-        damageStats: ["Fortaleza", "Regeneración", "Resistencia", "Resistencia Mágica", "Entereza"],
-        damageType: "acido",
-        meleeOnly: true, // solo si el atacante está pegado (distancia 1) al recibir el golpe
-    },
-
-};
+// PASSIVES vive en passives.js (lo comparten armería y alquimista).
 
 // ---------- Estado ----------
 let state = null;
@@ -221,9 +137,101 @@ function allyBuffAbilitiesOf(u) {
 // El jugador da [] (todavía es una unidad única, sin aliados) — no
 // está hardcodeado "los enemigos son aliados entre sí" en ningún otro
 // lado, cualquier IA que necesite este concepto pasa por acá.
+// ---------- Bandos ----------
+// Bando "player": el jugador y lo que él invoca (state.allies).
+// Bando "enemy": las criaturas del encuentro y lo que ellas invocan.
+// Sin invocados, alliesOf/opponentsOf dan exactamente lo mismo que antes.
+function sideOf(u) {
+    return (u === state.player || u.side === "player") ? "player" : "enemy";
+}
+
+function unitsOfSide(side) {
+    return side === "player" ? [state.player, ...state.allies] : state.enemies;
+}
+
 function alliesOf(u) {
-    if (u === state.player) return [];
-    return state.enemies.filter(e => e !== u && e.hp > 0);
+    return unitsOfSide(sideOf(u)).filter(x => x !== u && x.hp > 0);
+}
+
+function opponentsOf(u) {
+    return unitsOfSide(sideOf(u) === "player" ? "enemy" : "player").filter(x => x.hp > 0);
+}
+
+// Nombre para el registro ("el jugador" o la etiqueta de la unidad), con
+// la contracción que corresponda: "hacia el jugador", "al jugador", "del jugador".
+function nameOf(u) {
+    return u === state.player ? "el jugador" : u.label;
+}
+function toNameOf(u) {
+    return u === state.player ? "al jugador" : `a ${u.label}`;
+}
+function fromNameOf(u) {
+    return u === state.player ? "del jugador" : `de ${u.label}`;
+}
+
+// Blanco de la IA: el rival vivo más cercano (caminando, sin contar
+// unidades en el medio). Empate: prefiere al jugador. Sin invocados, el
+// único rival de una criatura es el jugador, así que no cambia nada.
+function pickTarget(u) {
+    const opps = opponentsOf(u);
+    if (!opps.length) return null;
+    const field = bfsDistances(u.pos, new Set());
+    let best = null, bestD = Infinity;
+    for (const o of opps) {
+        const d = isFinite(field[o.pos]) ? field[o.pos] : 1000 + manhattan(u.pos, o.pos);
+        if (d < bestD || (d === bestD && o === state.player)) { best = o; bestD = d; }
+    }
+    return best;
+}
+
+// ---------- Invocaciones ----------
+// Una habilidad con `summon: "<key de creature_types>"` crea esa criatura
+// en una casilla libre pegada a quien la usa, del mismo bando. Actúa en
+// la misma ronda (los del jugador juegan después de su turno; los de las
+// criaturas, en la fase enemiga, que los recorre al final de la lista).
+// Los invocados no dan oro, XP ni alma.
+function summonAbilitiesOf(u) {
+    return u.abilities.filter(key => ABILITIES[key].summon);
+}
+
+// Casilla donde aparecería el invocado, o -1 si no hay lugar. Prefiere
+// casillas sin trampas y, entre ellas, la más cercana al rival más cercano.
+function summonCellFor(caster) {
+    const occupied = new Set(allUnits().filter(x => x.hp > 0).map(x => x.pos));
+    const free = neighbors4(caster.pos).filter(n => state.cells[n].active && !occupied.has(n));
+    if (!free.length) return -1;
+    const noTrap = free.filter(n => !state.traps.some(t => t.pos === n));
+    const pool = noTrap.length ? noTrap : free;
+    const target = pickTarget(caster);
+    if (target) pool.sort((a, b) => manhattan(a, target.pos) - manhattan(b, target.pos));
+    return pool[0];
+}
+
+function canSummonNow(u, key) {
+    const ab = ABILITIES[key];
+    if (!ENEMY_TYPES[ab.summon]) return false;
+    if (u.ap < ab.apCost) return false;
+    if (ab.cooldown && u.cooldowns[key] > 0) return false;
+    return summonCellFor(u) !== -1;
+}
+
+function spawnSummon(caster, type, pos) {
+    const cfg = ENEMY_TYPES[type];
+    const unit = freshUnit(cfg);
+    const side = sideOf(caster);
+    state.summonCount = (state.summonCount || 0) + 1;
+    unit.type = type;
+    unit.id = `${type}_s${state.summonCount}`;
+    unit.label = side === "player" ? `${cfg.label} (aliado)` : cfg.label;
+    unit.icon = cfg.icon;
+    unit.cls = cfg.family;
+    unit.xp = 0;
+    unit.summoned = true;
+    unit.side = side;
+    unit.pos = pos;
+    if (side === "player") state.allies.push(unit);
+    else state.enemies.push(unit);
+    return unit;
 }
 
 // Blancos válidos de una habilidad targetType "ally": los aliados vivos
@@ -276,7 +284,7 @@ function desiredRangeOf(u) {
   return trapRanges.length ? Math.max(...trapRanges) : 1;
 }
 
-function allUnits() { return [state.player, ...state.enemies]; }
+function allUnits() { return [state.player, ...state.allies, ...state.enemies]; }
 function livingEnemies() { return state.enemies.filter(e => e.hp > 0); }
 function unitAt(pos, exclude) {
     for (const u of allUnits()) {
@@ -322,6 +330,8 @@ async function newGame() {
     state = {
         cells,
         player: freshUnit(PLAYER_CONFIG),
+        allies: [],       // invocados del jugador (ver spawnSummon)
+        summonCount: 0,
         enemies: [],
         turn: "player",
         selection: null,
@@ -697,14 +707,14 @@ async function performAreaAttack(attacker, impactPos, key) {
     const affectedCells = resolveAoeCells(impactPos, ab.aoeRadius)
         .filter(pos => !(ab.selfCentered && pos === attacker.pos));
     const rawDamage = computeAbilityDamage(attacker, key);
-    const attackerIsPlayer = attacker === state.player;
+    const attackerSide = sideOf(attacker);
 
     const hits = [];
     for (const pos of affectedCells) {
         const victim = unitAt(pos);
         if (!victim) continue;
         // opponentsOnly: el área ignora a los del mismo bando.
-        if (ab.opponentsOnly && (victim === state.player) === attackerIsPlayer) continue;
+        if (ab.opponentsOnly && sideOf(victim) === attackerSide) continue;
         const { dmg, dodged } = applyDamage(victim, rawDamage, ab.damageType);
         hits.push({ victim, pos, dmg, dodged });
     }
@@ -953,7 +963,7 @@ async function placeTrap(caster, key, pos) {
     caster.ap -= ab.apCost;
     if (ab.cooldown) caster.cooldowns[key] = ab.cooldown;
     const dmg = computeAbilityDamage(caster, key);
-    state.traps.push({ pos, ownerIsPlayer: caster === state.player, dmg, damageType: ab.damageType, moveLoss: ab.trapMoveLoss || 0 });
+    state.traps.push({ pos, ownerIsPlayer: sideOf(caster) === "player", dmg, damageType: ab.damageType, moveLoss: ab.trapMoveLoss || 0 });
 
     const label = caster === state.player ? "Jugador" : caster.label;
     addLog(`${label} coloca una trampa oculta.`);
@@ -971,7 +981,7 @@ async function placeTrap(caster, key, pos) {
 // que pisa: las propias no te hacen nada. Reusa applyDamage, así la
 // trampa respeta Evasión/Defender de la víctima sin código nuevo.
 async function triggerTrapIfAny(unit, pos) {
-    const trapIdx = state.traps.findIndex(t => t.pos === pos && t.ownerIsPlayer !== (unit === state.player));
+    const trapIdx = state.traps.findIndex(t => t.pos === pos && t.ownerIsPlayer !== (sideOf(unit) === "player"));
     if (trapIdx === -1) return;
     const trap = state.traps[trapIdx];
     state.traps.splice(trapIdx, 1); // se consume, un solo uso
@@ -1009,7 +1019,7 @@ async function walkPath(u, path) {
 // ---------- Acciones del jugador ----------
 async function tryMovePlayerTo(target) {
     const u = state.player;
-    const blocked = new Set(livingEnemies().map(e => e.pos));
+    const blocked = new Set(allUnits().filter(x => x !== u && x.hp > 0).map(x => x.pos));
     const path = bfsPath(u.pos, target, blocked);
     if (!path || path.length === 0 || path.length > u.move) return;
 
@@ -1027,6 +1037,12 @@ async function selectCard(key) {
     const u = state.player;
     if (u.ap < ab.apCost) return;
     if (u.cooldowns[key] > 0) return;
+
+    if (ab.summon && summonCellFor(u) === -1) {
+        addLog(`No hay una casilla libre al lado tuyo para usar ${ab.name}.`);
+        renderLog();
+        return;
+    }
 
     if (!ab.needsTarget) {
         // Usar una habilidad sin objetivo (Defender, Evasión…) cancela la
@@ -1051,9 +1067,25 @@ async function castNoTarget(caster, key, label) {
     // Una unidad muerta no actúa (ej: la mató una trampa al caminar).
     if (caster.hp <= 0) return;
     const ab = ABILITIES[key];
+    // Invocación: si no hay lugar (o la criatura no existe), no se usa y
+    // no gasta PA ni entra en CD.
+    let summonCell = -1;
+    if (ab.summon) {
+        summonCell = summonCellFor(caster);
+        if (summonCell === -1 || !ENEMY_TYPES[ab.summon]) {
+            if (!ENEMY_TYPES[ab.summon]) console.error(`[combate] ${ab.name}: la criatura "${ab.summon}" no existe en creature_types.`);
+            addLog(`${label} no puede usar ${ab.name}: no hay lugar al lado.`);
+            renderLog();
+            return;
+        }
+    }
     caster.ap -= ab.apCost;
     if (ab.cooldown) caster.cooldowns[key] = ab.cooldown;
-    if (ab.reductionStats) {
+    let summoned = null;
+    if (ab.summon) {
+        summoned = spawnSummon(caster, ab.summon, summonCell);
+        addLog(`${label} usa ${ab.name} y aparece ${summoned.label}.`);
+    } else if (ab.reductionStats) {
         const reduction = computeAbilityReduction(caster, key);
         caster.defendReduction = reduction;
         caster.defendActive = true;
@@ -1116,7 +1148,8 @@ async function castNoTarget(caster, key, label) {
     render();
 
     // Efecto sobre quien lo lanzó (después del render, que rehace el tablero)
-    if (ab.reductionStats) fxAura(caster.pos, "shield");
+    if (summoned) fxAura(summoned.pos, "buff");
+    else if (ab.reductionStats) fxAura(caster.pos, "shield");
     else if (ab.dodgeStats || ab.resourceGrant) fxAura(caster.pos, "dodge");
     else if (ab.buffStats) (ab.buffsAllies ? [caster, ...alliesOf(caster)] : [caster]).forEach(u => fxAura(u.pos, "buff"));
     else if (ab.alliesNextTurnGrant) alliesOf(caster).forEach(u => fxAura(u.pos, "buff"));
@@ -1500,7 +1533,7 @@ async function checkGameOver() {
         showOverlay(false);
         return;
     }
-    state.enemies.forEach(e => {
+    [...state.allies, ...state.enemies].forEach(e => {
         if (e.hp <= 0 && !e._deadLogged) {
             e._deadLogged = true;
             addLog(`${e.label} ha caído.`, "turn");
@@ -1545,7 +1578,8 @@ async function saveVictory() {
 
     // El oro NO se calcula acá: se manda qué criaturas murieron y la Edge
     // Function decide cuánto vale (mirando creature_types).
-    const defeatedKeys = state.enemies.map(e => e.type);
+    // Los invocados no dan oro ni XP: no se mandan.
+    const defeatedKeys = state.enemies.filter(e => !e.summoned).map(e => e.type);
     let result;
     try {
         result = await finishCombat(defeatedKeys, state.player.hp);
@@ -1581,7 +1615,7 @@ async function saveVictory() {
     // no dan alma. Si no hay ranuras libres para el nivel (connect-soul.ts:
     // 1 por nivel) se trata como si no hubiera caído nada.
     try {
-        const soulEligibleEnemies = state.enemies.filter(e => ENEMY_TYPES[e.type]?.family !== "bandidos");
+        const soulEligibleEnemies = state.enemies.filter(e => !e.summoned && ENEMY_TYPES[e.type]?.family !== "bandidos");
         if (soulEligibleEnemies.length && Math.random() < SOUL_DROP_CHANCE) {
             const soulType = soulEligibleEnemies[Math.floor(Math.random() * soulEligibleEnemies.length)].type;
             if (hasSoulSlot(PLAYER_CONFIG.level, PLAYER_CONFIG.souls.length)) {
@@ -1644,6 +1678,20 @@ async function endPlayerTurn() {
 }
 
 async function runEnemyPhase() {
+    // Primero juegan los invocados del jugador (los que invocó en este
+    // turno también: actúan en la misma ronda).
+    for (const ally of state.allies) {
+        if (state.gameOver) break;
+        if (ally.hp <= 0) continue;
+        state.actingUnit = ally;
+        renderBoard();
+        await safely(() => runUnitAiTurn(ally));
+        if (state.gameOver) break;
+        await sleep(UNIT_TURN_GAP);
+    }
+    if (state.gameOver) { state.actingUnit = null; return; }
+    // for...of recorre también a los que se agregan durante la fase, así
+    // que lo que invoca una criatura juega en esta misma ronda.
     for (const enemy of state.enemies) {
         if (state.gameOver) break;
         if (enemy.hp <= 0) continue;
@@ -1662,7 +1710,12 @@ async function runEnemyPhase() {
 
 // ---------- IA genérica (con animación) ----------
 async function runUnitAiTurn(u) {
-    const p = state.player;
+    // Blanco: el rival más cercano (ver pickTarget). Sin invocados es
+    // siempre el jugador, como antes. Se vuelve a elegir en cada paso por
+    // si el blanco muere o se mueve (Atraer).
+    let p = null;
+    let pPos = -1;
+    let distToPlayer = null;
 
     u.move = Math.max(0, u.maxMove + effectiveResourceBonus(u, "move") + (u.moveBonusPending || 0) - (u.moveDrainPending || 0));
     u.ap = Math.max(0, u.maxAp + effectiveResourceBonus(u, "ap") + (u.apBonusPending || 0) - (u.apDrainPending || 0));
@@ -1687,7 +1740,6 @@ async function runUnitAiTurn(u) {
     addLog(`Turno de ${u.label}.`, "turn");
     renderLog();
 
-    const distToPlayer = bfsDistances(p.pos, new Set());
     const desiredRange = desiredRangeOf(u);
 
     let steps = 0;
@@ -1696,6 +1748,13 @@ async function runUnitAiTurn(u) {
         // Si murió en el paso anterior (una trampa al caminar, un
         // contraataque…), el turno termina acá.
         if (state.gameOver || u.hp <= 0) break;
+        const target = pickTarget(u);
+        if (!target) break;
+        if (target !== p || target.pos !== pPos) {
+            p = target;
+            pPos = target.pos;
+            distToPlayer = bfsDistances(p.pos, new Set());
+        }
         const distToP = manhattan(u.pos, p.pos);
 
         // El estilo "real" para decidir este paso: medic se comporta
@@ -1739,6 +1798,13 @@ async function runUnitAiTurn(u) {
             continue;
         }
 
+        // Invocar: cada vez que pueda (el CD largo lo limita).
+        const summonKey = summonAbilitiesOf(u).find(key => canSummonNow(u, key));
+        if (summonKey) {
+            await castNoTarget(u, summonKey, u.label);
+            continue;
+        }
+
         // Buff con blanco (Empower): si algún aliado está en rango, se
         // castea ANTES de atacar. No depende del aiStyle. Prefiere a un
         // aliado que pueda atacar. Si no hay nadie en rango, sigue con
@@ -1758,16 +1824,27 @@ async function runUnitAiTurn(u) {
             continue;
         }
 
-        const attackKey = attackAbilitiesOf(u).find(key => {
+        // Primero contra su blanco; si no llega, contra cualquier otro
+        // rival que tenga a tiro (solo pasa si hay invocados).
+        const attackKeyFor = victim => attackAbilitiesOf(u).find(key => {
             const ab = ABILITIES[key];
             const onCooldown = ab.cooldown && u.cooldowns[key] > 0;
-            if (ab.pullsToMelee && manhattan(u.pos, p.pos) <= 1) return false; // ya está pegado: Pull no aporta
-            return inAbilityRange(u, p.pos, ab) && u.ap >= ab.apCost && !onCooldown;
+            if (ab.pullsToMelee && manhattan(u.pos, victim.pos) <= 1) return false; // ya está pegado: Pull no aporta
+            return inAbilityRange(u, victim.pos, ab) && u.ap >= ab.apCost && !onCooldown;
         });
+        let attackKey = attackKeyFor(p);
+        if (!attackKey) {
+            const others = opponentsOf(u).filter(o => o !== p)
+                .sort((a, b) => manhattan(u.pos, a.pos) - manhattan(u.pos, b.pos));
+            for (const o of others) {
+                const k = attackKeyFor(o);
+                if (k) { p = o; pPos = o.pos; distToPlayer = bfsDistances(p.pos, new Set()); attackKey = k; break; }
+            }
+        }
         if (attackKey) {
             const ab = ABILITIES[attackKey];
             if (ab.targetType === "area") {
-                // El punto de impacto es la casilla del jugador. No evita
+                // El punto de impacto es la casilla del blanco. No evita
                 // autolastimarse a propósito (según lo acordado); eso se
                 // resolverá más adelante con resistencia al fuego.
                 await performAreaAttack(u, p.pos, attackKey);
@@ -1783,8 +1860,8 @@ async function runUnitAiTurn(u) {
         // movimiento para alejarse en vez de aproximarse (a diferencia de
         // escurridizo, que solo huye cuando se quedó sin PA).
         if (style === "elusive") {
-            if (u.move > 0) await fleeFromPlayer(u, distToPlayer);
-            if (await tryPlaceTrapNearPlayer(u)) continue;
+            if (u.move > 0) await fleeFromPlayer(u, distToPlayer, p);
+            if (await tryPlaceTrapNearPlayer(u, p)) continue;
             const defKeyElusive = defensiveFallbackAbilityOf(u);
             if (defKeyElusive && u.hp <= u.maxHp * LOW_HP_FALLBACK_RATIO) {
                 await castNoTarget(u, defKeyElusive, u.label);
@@ -1801,7 +1878,7 @@ async function runUnitAiTurn(u) {
             const attackCosts = attackAbilitiesOf(u).map(key => ABILITIES[key].apCost);
             const cheapestAttackCost = attackCosts.length ? Math.min(...attackCosts) : Infinity;
             if (u.ap < cheapestAttackCost && u.move > 0) {
-                await fleeFromPlayer(u, distToPlayer);
+                await fleeFromPlayer(u, distToPlayer, p);
                 break;
             }
         }
@@ -1882,7 +1959,7 @@ async function runUnitAiTurn(u) {
                     if (path) {
                         await walkPath(u, path);
                         if (u.hp <= 0) break;
-                        addLog(`${u.label} se mueve hacia el jugador.`);
+                        addLog(`${u.label} se mueve hacia ${nameOf(p)}.`);
                         renderLog();
                         moved = true;
                     }
@@ -1904,7 +1981,7 @@ async function runUnitAiTurn(u) {
                     renderBoard();
                     await sleep(120);
                     u.pos = jumpCell;
-                    addLog(`${u.label} usa Salto para acercarse al jugador.`);
+                    addLog(`${u.label} usa Salto para acercarse ${toNameOf(p)}.`);
                     renderBoard();
                     renderLog();
                     await triggerTrapIfAny(u, jumpCell);
@@ -1914,7 +1991,7 @@ async function runUnitAiTurn(u) {
                 }
             }
 
-            if (await tryPlaceTrapNearPlayer(u)) continue;
+            if (await tryPlaceTrapNearPlayer(u, p)) continue;
 
             const defKey1 = defensiveFallbackAbilityOf(u);
             if (defKey1 && u.hp <= u.maxHp * LOW_HP_FALLBACK_RATIO) {
@@ -1924,7 +2001,7 @@ async function runUnitAiTurn(u) {
             break;
         }
 
-        if (await tryPlaceTrapNearPlayer(u)) continue;
+        if (await tryPlaceTrapNearPlayer(u, p)) continue;
 
         const defKey2 = defensiveFallbackAbilityOf(u);
         if (defKey2 && u.hp <= u.maxHp * LOW_HP_FALLBACK_RATIO) {
@@ -1975,7 +2052,7 @@ async function runMedicPriority(u) {
     return "fallthrough";
 }
 
-async function tryPlaceTrapNearPlayer(u) {
+async function tryPlaceTrapNearPlayer(u, target = state.player) {
     const trapKey = trapAbilitiesOf(u).find(key => {
         const ab = ABILITIES[key];
         const onCooldown = ab.cooldown && u.cooldowns[key] > 0;
@@ -1990,7 +2067,7 @@ async function tryPlaceTrapNearPlayer(u) {
         if (manhattan(u.pos, n) > ab.range) continue; // rango desde SU posición actual, no la del jugador
         if (unitAt(n)) continue;
         if (state.traps.some(t => t.pos === n)) continue;
-        const d = manhattan(n, state.player.pos);
+        const d = manhattan(n, target.pos);
         if (d < bestDist) { bestDist = d; bestCell = n; }
     }
     if (bestCell === -1) return false;
@@ -2003,7 +2080,7 @@ async function tryPlaceTrapNearPlayer(u) {
 // jugador (en vez de más cerca, como hace el resto de la IA para
 // acercarse). `distToPlayer` se recibe ya calculado por
 // runUnitAiTurn para no recalcularlo de nuevo acá.
-async function fleeFromPlayer(u, distToPlayer) {
+async function fleeFromPlayer(u, distToPlayer, from = state.player) {
     const occupied = new Set(allUnits().filter(x => x !== u && x.hp > 0).map(x => x.pos));
     const reach = bfsDistances(u.pos, occupied);
     let bestCell = -1, bestDist = distToPlayer[u.pos];
@@ -2021,7 +2098,7 @@ async function fleeFromPlayer(u, distToPlayer) {
     if (!path) return false;
     await walkPath(u, path);
     if (state.gameOver) return true;
-    addLog(`${u.label} se aleja del jugador.`);
+    addLog(`${u.label} se aleja ${fromNameOf(from)}.`);
     renderLog();
     return true;
 }
@@ -2082,6 +2159,17 @@ function startPlayerTurn() {
 }
 
 // ---------- Render ----------
+// Marca de los invocados del jugador. Va acá (y no en battle.css) para
+// no depender de otra versión del CSS; se puede mover cuando quieras.
+(function injectAllyStyle() {
+    const style = document.createElement("style");
+    style.textContent = `
+        .cell.ally-unit .unit-token { box-shadow: 0 0 0 2px var(--teal, #2bb3a3); border-radius: 50%; }
+        .cell.ally-unit .unit-nameplate { border-color: var(--teal, #2bb3a3); color: var(--teal, #2bb3a3); }
+        .cell.ally-unit .unit-hp-fill { background: var(--teal, #2bb3a3); }
+    `;
+    document.head.appendChild(style);
+})();
 const boardEl = document.getElementById("board");
 setupFx({ board: boardEl, hitDelay: HIT_DELAY, distance: manhattan });
 const handEl = document.getElementById("hand");
@@ -2138,7 +2226,7 @@ function renderBoard() {
                 if (state.cells[n].active && inAbilityRange(state.player, n, ab)) targetableSet.add(n);
             }
         } else {
-            const blocked = new Set(livingEnemies().map(e => e.pos));
+            const blocked = new Set(allUnits().filter(x => x !== state.player && x.hp > 0).map(x => x.pos));
             const dist = bfsDistances(state.player.pos, blocked);
             for (let i = 0; i < SIZE * SIZE; i++) {
                 if (state.cells[i].active && dist[i] > 0 && dist[i] <= state.player.move) reachableSet.add(i);
@@ -2160,6 +2248,8 @@ function renderBoard() {
         if (occupant) {
             const isPlayer = occupant === state.player;
             div.classList.add(isPlayer ? "player-unit" : "enemy-unit");
+            // Invocado del jugador: se dibuja como criatura, con marca de aliado.
+            if (!isPlayer && sideOf(occupant) === "player") div.classList.add("ally-unit");
             const acting = (isPlayer && state.turn === "player" && !state.gameOver)
                 || (!isPlayer && state.actingUnit === occupant);
             const iconCls = "unit-icon" + (occupant.commandActive ? " command-buffed" : "");
@@ -2222,7 +2312,9 @@ function cardMetaShort(u, key) {
     const ab = ABILITIES[key];
     const parts = [];
     const rangeText = ab.range > 1 ? `Alc. ${ab.range}` : null;
-    if (ab.damageStats) {
+    if (ab.summon) {
+        parts.push(`Invoca ${ENEMY_TYPES[ab.summon]?.label || ab.summon}`);
+    } else if (ab.damageStats) {
         parts.push(`Daño ${computeAbilityDamage(u, key)}`);
         if (rangeText) parts.push(rangeText);
         if (ab.aoeRadius) parts.push(`Área ${ab.aoeRadius}`);
@@ -2264,17 +2356,22 @@ function cardMetaShort(u, key) {
     return parts.join(" · ");
 }
 
+// Habilidades que el jugador desactivó en la página Habilidades: no se
+// muestran en la mano (ver ability-prefs.js). Se leen una vez al cargar.
+const hiddenAbilities = getHiddenAbilities(getSession()?.id);
+
 function renderHand() {
     handEl.innerHTML = "";
     const u = state.player;
-    u.abilities.forEach(key => {
+    visibleAbilities(u.abilities, hiddenAbilities).forEach(key => {
         const ab = ABILITIES[key];
         const btn = document.createElement("button");
         btn.className = "card-btn" + (state.selection && state.selection.ability === key ? " selected" : "");
         btn.dataset.key = key;
         const onCooldown = u.cooldowns[key] > 0;
         const noAp = u.ap < ab.apCost;
-        btn.disabled = (state.turn !== "player" || state.gameOver || state.busy || onCooldown || noAp);
+        const noRoom = !!ab.summon && summonCellFor(u) === -1;
+        btn.disabled = (state.turn !== "player" || state.gameOver || state.busy || onCooldown || noAp || noRoom);
 
 
         // Si la habilidad hace daño, mostramos el número real calculado
@@ -2283,7 +2380,10 @@ function renderHand() {
         // cambian a mitad de partida, la carta lo refleja sola. Lo mismo
         // para Defender, pero con la reducción en vez del daño.
         let desc = ab.desc;
-        if (ab.damageStats) {
+        if (ab.summon) {
+            const cfg = ENEMY_TYPES[ab.summon];
+            desc = `Invoca ${cfg?.label || ab.summon} (${cfg?.hp ?? "?"} de vida) en una casilla libre pegada a vos. Pelea solo de tu lado y juega en esta misma ronda · CD ${ab.cooldown}`;
+        } else if (ab.damageStats) {
             const dmgPreview = computeAbilityDamage(u, key);
             const aoeText = ab.aoeRadius ? ` · Área radio ${ab.aoeRadius}` : "";
             const pullText = ab.pullsToMelee ? " · Atrae al objetivo" : "";

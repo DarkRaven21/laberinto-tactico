@@ -5,6 +5,7 @@ import { getItems, getEquipment, sellItem, hasUnseenArmeriaNews } from "./equipm
 import { ICON_COINS } from "./icons.js";
 import { CITY_EVENTS, buyEvent } from "./events.js";
 import { PLAYER_CONFIG } from "./player.js";
+import { isLaberintoInProgress } from "./progress.js";
 
 const TAX_INTERVAL = 6;
 // Inflación de comida y descanso: +25% compuesto cada 6 vueltas
@@ -95,10 +96,18 @@ function renderTaxNotice() {
     `;
 }
 
-// Los tres botones de navegación ya están en el markup de ciudad.php
+// Los botones de navegación ya están en el markup de ciudad.php
 // (header/sidebar) — acá solo se enganchan los listeners.
 document.getElementById("goToArmeriaBtn").addEventListener("click", () => {
     window.location.href = "armeria.html";
+});
+
+document.getElementById("goToAlquimistaBtn").addEventListener("click", () => {
+    window.location.href = "alquimista.html";
+});
+
+document.getElementById("goToHabilidadesBtn").addEventListener("click", () => {
+    window.location.href = "habilidades.html";
 });
 
 document.getElementById("goToLaberintoBtn").addEventListener("click", () => {
@@ -621,6 +630,13 @@ function renderArmeriaBadge() {
 }
 
 async function init() {
+    // Si dejaste una corrida a medias (por ejemplo, cerraste en la sala 8
+    // y volviste a loguearte), la ciudad te manda directo al laberinto.
+    // replace: así el botón "atrás" no te devuelve a la ciudad.
+    if (await isLaberintoInProgress()) {
+        window.location.replace("laberinto.html");
+        return;
+    }
     renderCharacterCard();
     const [bank, itemsRes, equipmentRes] = await Promise.all([
         getBank(), getItems(), getEquipment()

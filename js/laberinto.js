@@ -39,6 +39,30 @@ let currentProgress = null;
 // pasada (progress.gold).
 let bankGold = 0;
 
+// Tipos de criatura que ya te dieron XP (character_killed_types, viene
+// con getProgress). Se lee una vez al entrar: las muertes nuevas pasan en
+// la página de combate y al volver se vuelve a pedir.
+let killedTypes = new Set();
+
+// Misma cuenta que finish-combat en progress-action.ts:
+// - XP: una sola vez por TIPO y solo si nunca lo mataste; bandidos nunca dan.
+// - Oro: por cada criatura, ceil(xp × 1.5); bandidos ceil(xp × 3).
+function encounterRewards(encounter) {
+    let xp = 0;
+    let gold = 0;
+    const counted = new Set();
+    for (const key of encounter) {
+        const cfg = ENEMY_TYPES[key] || {};
+        const isBandit = cfg.family === "bandidos";
+        gold += Math.ceil((cfg.xp || 0) * (isBandit ? 3 : 1.5));
+        if (!isBandit && !killedTypes.has(key) && !counted.has(key)) {
+            counted.add(key);
+            xp += cfg.xp || 0;
+        }
+    }
+    return { xp, gold };
+}
+
 // Horas de "Descansar" ya aplicadas de forma optimista en el cliente
 // pero todavía no confirmadas con progress-action. Se van sumando en
 // cada click sin llamar al server (ver rest()) y se mandan de una
@@ -112,6 +136,7 @@ function updatePlayerStats(progress) {
 async function rollNewLaberinto() {
     const [progress, bank] = await Promise.all([getProgress(), getBank()]);
     currentProgress = progress;
+    killedTypes = new Set(progress.killedTypes || []);
     bankGold = bank?.gold ?? 0;
     updateRoomLabel(currentProgress.room);
     updateHoursLabel(currentProgress.hours_remaining);
@@ -252,7 +277,9 @@ function render() {
                 </div>`;
         }).join("");
 
-        const totalXp = encounter.reduce((sum, key) => sum + (ENEMY_TYPES[key].xp || 0), 0);
+        // XP solo de lo que todavía te da XP; oro siempre.
+        const { xp, gold } = encounterRewards(encounter);
+        const rewardText = xp > 0 ? `XP ${xp} · Oro ${gold}` : `Oro ${gold}`;
         // Nombres en una línea: solo se ve en el celular, donde los chips
         // muestran únicamente el ícono (ver laberinto2.css).
         const namesLine = encounter.map(key => ENEMY_TYPES[key].label).join(" · ");
@@ -260,7 +287,7 @@ function render() {
         card.innerHTML = `
             <div class="path-header">
                 <span class="path-name">Camino ${i + 1}</span>
-                <span class="path-xp">XP ${totalXp}</span>
+                <span class="path-xp">${rewardText}</span>
             </div>
             <div class="path-enemies">${enemiesHtml}</div>
             <div class="path-names">${namesLine}</div>

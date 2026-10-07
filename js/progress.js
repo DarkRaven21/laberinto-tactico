@@ -25,9 +25,12 @@ async function callProgressAction(action, extra = {}) {
 // gratis. laberinto.js lo cachea para poder estimar HP/horas de forma
 // optimista en el cliente sin pegarle al server por cada "Descansar".
 export async function getProgress() {
-    const { progress, heal_per_hour, max_hp, error } = await callProgressAction("get");
+    const { progress, heal_per_hour, max_hp, killed_types, error } = await callProgressAction("get");
     if (error) throw new Error(error);
-    return { ...progress, healPerHour: heal_per_hour, maxHp: max_hp };
+    // killedTypes: tipos de criatura que ya te dieron XP (ver
+    // character_killed_types). El laberinto lo usa para que las tarjetas
+    // muestren XP solo de lo que todavía no mataste.
+    return { ...progress, healPerHour: heal_per_hour, maxHp: max_hp, killedTypes: killed_types || [] };
 }
 
 // Hace avanzar el reloj `hours` horas, curando de a una hora por vez
@@ -112,4 +115,27 @@ export async function resetProgress(outcome = "exit") {
     const { progress, error } = await callProgressAction("reset", { outcome });
     if (error) throw new Error(error);
     return progress;
+}
+
+// ¿El personaje tiene una corrida del laberinto en curso? Lo usa la
+// ciudad para mandarte directo al laberinto si saliste a mitad de una
+// corrida (por ejemplo, cerraste el navegador en la sala 8 y volviste a
+// entrar desde otro dispositivo: el login te deja en la ciudad).
+// Una corrida está en curso si la fila de progreso NO está como la deja
+// 'reset' (sala 1, nivel 1, 24 horas, 0 de oro). Entrar al laberinto y
+// volver sin pelear deja todo igual, así que ahí no se redirige: no hay
+// nada que retomar. Ante cualquier error devuelve false (te quedás en la
+// ciudad, que es lo que pasaba antes).
+const FRESH_HOURS = 24; // MAX_HOURS de progress-action.ts
+
+export async function isLaberintoInProgress() {
+    try {
+        const p = await getProgress();
+        return (p.room || 1) > 1
+            || (p.laberinto_level || 1) > 1
+            || (p.hours_remaining ?? FRESH_HOURS) < FRESH_HOURS
+            || (p.gold || 0) > 0;
+    } catch {
+        return false;
+    }
 }

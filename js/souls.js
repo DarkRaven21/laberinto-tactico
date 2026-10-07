@@ -33,3 +33,21 @@ export async function connectSoul(soulType) {
 export function hasSoulSlot(level, soulsCount) {
     return soulsCount < level;
 }
+
+// El Alquimista separa un alma del personaje (ver disconnect-soul.ts).
+// El precio, el chequeo de oro y el descuento son server-side: esto
+// devuelve { ok, gold } o { error }.
+export const SOUL_DISCONNECT_PRICE = 100; // solo para mostrar; el que vale es el del server
+
+export async function disconnectSoul(soulType) {
+    const session = getSession();
+    const res = await supabaseFetch("/functions/v1/disconnect-soul", {
+        method: "POST",
+        body: JSON.stringify({
+            character_id: session.id,
+            session_token: session.session_token,
+            soul_type: soulType
+        })
+    });
+    return res.json();
+}

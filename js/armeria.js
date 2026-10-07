@@ -6,6 +6,7 @@ import {
 } from "./equipment.js";
 import { ICON_COINS } from "./icons.js";
 import { ABILITIES } from "./abilities.js";
+import { PASSIVES } from "./passives.js";
 
 requireSession();
 
@@ -33,14 +34,13 @@ function statsLine(stats) {
     return Object.entries(stats || {}).map(([k, v]) => `${k} +${v}`).join(" · ");
 }
 
-// Habilidades y pasivas que da el ítem, solo el nombre. El nombre de la
-// habilidad sale de abilities.js; las pasivas viven en battle.js, así que
-// por ahora se muestra su clave.
+// Habilidades y pasivas que da el ítem, solo el nombre (de abilities.js
+// y passives.js; si una clave no existe, se muestra la clave).
 function grantsLine(item) {
     const parts = [];
     const abilities = (item.abilities || []).map(k => ABILITIES[k]?.name || k);
     if (abilities.length) parts.push(`${abilities.length > 1 ? "Habilidades" : "Habilidad"}: ${abilities.join(", ")}`);
-    const passives = item.passives || [];
+    const passives = (item.passives || []).map(k => PASSIVES[k]?.name || k);
     if (passives.length) parts.push(`${passives.length > 1 ? "Pasivas" : "Pasiva"}: ${passives.join(", ")}`);
     return parts.join(" · ");
 }

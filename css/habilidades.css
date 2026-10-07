@@ -1,0 +1,134 @@
+/* Habilidades: reusa armeria.css (grilla y cartas) y alquimista.css
+   (filas de stats). Esto agrega el interruptor y lo propio de la página. */
+
+.hab-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+}
+
+/* Costo, cooldown y alcance */
+.hab-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+
+.hab-chip {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text-dim);
+    border: 1px solid #2c313b;
+    border-radius: 4px;
+    padding: 1px 6px;
+}
+
+/* Resultado con los stats del jugador: lo más importante de la carta */
+.hab-result {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--teal);
+}
+
+.hab-result > div:first-child {
+    font-size: 13px;
+    font-weight: 700;
+}
+
+/* Stats de equipo: se distinguen porque no los da ni la clase ni las almas */
+.hab-stat--equip .alquimista-stat-name::after {
+    content: " (equipo)";
+    color: #6b7280;
+    font-size: 10px;
+}
+
+/* ---------- Interruptor Activa / Desactivada ---------- */
+.hab-switch {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: none;
+    border: none;
+    padding: 2px;
+    cursor: pointer;
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--teal);
+    flex-shrink: 0;
+}
+
+.hab-switch:focus-visible {
+    outline: 2px solid var(--amber);
+    outline-offset: 2px;
+    border-radius: 4px;
+}
+
+.hab-switch:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+.hab-switch-track {
+    position: relative;
+    width: 30px;
+    height: 16px;
+    border-radius: 8px;
+    background: var(--teal);
+    transition: background 0.15s;
+}
+
+.hab-switch-thumb {
+    position: absolute;
+    top: 2px;
+    left: 16px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #0c1a19;
+    transition: left 0.15s;
+}
+
+.hab-switch[aria-checked="false"] {
+    color: var(--text-dim);
+}
+
+.hab-switch[aria-checked="false"] .hab-switch-track {
+    background: #363c48;
+}
+
+.hab-switch[aria-checked="false"] .hab-switch-thumb {
+    left: 2px;
+    background: var(--text-dim);
+}
+
+/* Carta desactivada: apagada, pero el interruptor se ve bien */
+.hab-card--off {
+    border-style: dashed;
+}
+
+.hab-card--off .armeria-item-name,
+.hab-card--off .hab-meta,
+.hab-card--off .hab-result,
+.hab-card--off .alquimista-stat-list {
+    opacity: 0.45;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .hab-switch-track,
+    .hab-switch-thumb {
+        transition: none;
+    }
+}
+
+@media (max-width: 600px) {
+    .hab-result {
+        font-size: 11px;
+    }
+    .hab-result > div:first-child {
+        font-size: 12px;
+    }
+}
