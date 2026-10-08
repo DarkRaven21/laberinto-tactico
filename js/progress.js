@@ -25,12 +25,21 @@ async function callProgressAction(action, extra = {}) {
 // gratis. laberinto.js lo cachea para poder estimar HP/horas de forma
 // optimista en el cliente sin pegarle al server por cada "Descansar".
 export async function getProgress() {
-    const { progress, heal_per_hour, max_hp, killed_types, error } = await callProgressAction("get");
+    const { progress, heal_per_hour, max_hp, killed_types, rift, available_rift, error } = await callProgressAction("get");
     if (error) throw new Error(error);
     // killedTypes: tipos de criatura que ya te dieron XP (ver
     // character_killed_types). El laberinto lo usa para que las tarjetas
     // muestren XP solo de lo que todavía no mataste.
-    return { ...progress, healPerHour: heal_per_hour, maxHp: max_hp, killedTypes: killed_types || [] };
+    // rift: grieta en curso (sala, enemigos, si es el jefe…) o null.
+    // availableRift: grieta que puede aparecer en esta corrida o null.
+    return {
+        ...progress,
+        healPerHour: heal_per_hour,
+        maxHp: max_hp,
+        killedTypes: killed_types || [],
+        rift: rift || null,
+        availableRift: available_rift || null
+    };
 }
 
 // Hace avanzar el reloj `hours` horas, curando de a una hora por vez
@@ -95,10 +104,20 @@ export async function finishCombat(defeatedKeys, hp) {
     };
 }
 
+// Dentro de una grieta avanza de sala de la grieta; después del jefe la
+// cierra y devuelve la sala y las horas del laberinto (riftClosed: true).
 export async function advanceRoom() {
-    const { progress, error } = await callProgressAction("advance-room");
+    const { progress, rift_closed, error } = await callProgressAction("advance-room");
     if (error) throw new Error(error);
-    return progress;
+    return { ...progress, riftClosed: !!rift_closed };
+}
+
+// Entrar a la grieta ofrecida en el laberinto. El servidor valida nivel,
+// sala mínima, alma requerida y que sea la primera de la corrida.
+export async function enterRift(riftKey) {
+    const { progress, rift, error } = await callProgressAction("enter-rift", { rift_key: riftKey });
+    if (error) throw new Error(error);
+    return { progress, rift };
 }
 
 export async function advanceLevel() {

@@ -41,7 +41,10 @@ function applyBiome(biomeKey) {
     Object.keys(BIOMES).forEach(k => wrap.classList.remove(`biome-${k}`));
     wrap.classList.add(`biome-${biomeKey}`);
     const subtitle = document.querySelector(".subtitle");
-    if (subtitle && currentProgress) subtitle.textContent = `Sala ${currentProgress.room} · ${BIOMES[biomeKey].name}`;
+    const rift = currentProgress?.rift;
+    if (subtitle && currentProgress) subtitle.textContent = rift
+        ? `${rift.label} · ${rift.is_boss ? "Jefe" : `Sala ${rift.room} de ${rift.total_rooms}`} · ${BIOMES[biomeKey].name}`
+        : `Sala ${currentProgress.room} · ${BIOMES[biomeKey].name}`;
 }
 
 // ABILITIES vive en abilities.js (lo comparte con la página admin).
@@ -354,7 +357,13 @@ async function newGame() {
     state.player.pos = pIdx;
     const used = new Set([pIdx]);
 
-    const encounter = readForcedEncounter() || generateEncounter(currentProgress.room, currentProgress.laberinto_level);
+    // Grieta: los enemigos los decide el servidor (sala actual de la
+    // grieta), no el navegador. El encuentro guardado se descarta igual.
+    const forced = readForcedEncounter();
+    const rift = currentProgress.rift;
+    const encounter = (rift && rift.enemies.length ? rift.enemies.slice() : null)
+        || forced
+        || generateEncounter(currentProgress.room, currentProgress.laberinto_level);
     state.enemies = encounter.map((type, i) => {
         const cfg = ENEMY_TYPES[type];
         const unit = freshUnit(cfg);
@@ -383,7 +392,7 @@ async function newGame() {
         return unit;
     });
 
-    state.biome = pickBiome(state.enemies);
+    state.biome = (rift?.biome && BIOMES[rift.biome]) ? rift.biome : pickBiome(state.enemies);
     decorateCells(cells, state.biome);
     applyBiome(state.biome);
 
@@ -1696,7 +1705,9 @@ async function saveVictory() {
     victorySaved = true;
     victorySaving = false;
     const { progress, goldGained, xpGained, level, leveledUp } = result;
-    currentProgress = progress;
+    // finish-combat no devuelve el estado de la grieta: se conserva el que
+    // se leyó al arrancar (lo usan la probabilidad de alma y el cartel).
+    currentProgress = { ...progress, rift: currentProgress.rift };
     state.player.maxHp = currentProgress.maxHp;
     addLog(`Ganaste ${goldGained} de oro${xpGained > 0 ? ` y ${xpGained} de XP` : ""}.`, "turn");
     if (leveledUp) {
@@ -1713,7 +1724,9 @@ async function saveVictory() {
     // 1 por nivel) se trata como si no hubiera caído nada.
     try {
         const soulEligibleEnemies = state.enemies.filter(e => !e.summoned && ENEMY_TYPES[e.type]?.family !== "bandidos");
-        if (soulEligibleEnemies.length && Math.random() < SOUL_DROP_CHANCE) {
+        // En una grieta la probabilidad la fija la grieta (rifts.soul_chance).
+        const soulChance = currentProgress.rift ? currentProgress.rift.soul_chance : SOUL_DROP_CHANCE;
+        if (soulEligibleEnemies.length && Math.random() < soulChance) {
             const soulType = soulEligibleEnemies[Math.floor(Math.random() * soulEligibleEnemies.length)].type;
             if (hasSoulSlot(PLAYER_CONFIG.level, PLAYER_CONFIG.souls.length)) {
                 await handleSoulDrop(soulType);
@@ -1895,8 +1908,15 @@ async function runUnitAiTurn(u) {
             continue;
         }
 
-        // Escudo: al aliado más golpeado (proporción de vida) que esté a
-        // alcance y no tenga ya un escudo igual o mayor; si no hay, a sí mismo.
+        // Invocar: cada vez que pueda (el CD largo lo limita).
+        const summonKey = summonAbilitiesOf(u).find(key => canSummonNow(u, key));
+        if (summonKey) {
+            await castNoTarget(u, summonKey, u.label);
+            continue;
+        }
+
+        // Escudo (después de invocar, así el recién invocado puede recibirlo):
+        // a un aliado a alcance que no tenga ya un escudo igual o mayor.
         const shieldKey = u.abilities.find(k => {
             const sab = ABILITIES[k];
             return sab.shieldStats && u.ap >= sab.apCost && !(sab.cooldown && u.cooldowns[k] > 0);
@@ -1907,8 +1927,11 @@ async function runUnitAiTurn(u) {
             const candidates = selfAndAlliesOf(u)
                 .filter(a => (a.shield || 0) < amount && inAbilityRange(u, a.pos, sab))
                 .sort((a, b) => (a.hp / a.maxHp) - (b.hp / b.maxHp));
+            // Prioridad: un aliado curador (sostiene al resto), después el más
+            // golpeado, y si no hay ninguno, a sí mismo.
+            const healer = candidates.find(a => a !== u && healAbilitiesOf(a).length > 0);
             const injured = candidates.find(a => a !== u && a.hp < a.maxHp);
-            const target = injured || (candidates.includes(u) ? u : null);
+            const target = healer || injured || (candidates.includes(u) ? u : null);
             if (target) {
                 await performShield(u, target, shieldKey);
                 continue;
@@ -1942,12 +1965,6 @@ async function runUnitAiTurn(u) {
             }
         }
 
-        // Invocar: cada vez que pueda (el CD largo lo limita).
-        const summonKey = summonAbilitiesOf(u).find(key => canSummonNow(u, key));
-        if (summonKey) {
-            await castNoTarget(u, summonKey, u.label);
-            continue;
-        }
 
         // Buff con blanco (Empower): si algún aliado está en rango, se
         // castea ANTES de atacar. No depende del aiStyle. Prefiere a un
@@ -2599,7 +2616,11 @@ function showOverlay(playerWon, goldGained, xpGained, leveledUp, level) {
     overlayTitle.textContent = playerWon ? "Victoria" : "Derrota";
     overlayTitle.className = playerWon ? "win" : "lose";
     lastGameWon = playerWon;
-    restartBtnEl.textContent = playerWon ? "Volver al laberinto" : "Volver a la ciudad";
+    const rift = currentProgress?.rift;
+    restartBtnEl.textContent = !playerWon ? "Volver a la ciudad"
+        : rift?.is_boss ? "Cerrar la grieta"
+        : rift ? "Siguiente sala de la grieta"
+        : "Volver al laberinto";
 
     if (playerWon && goldGained !== undefined) {
         const levelText = leveledUp ? ` ¡Subiste a nivel ${level}!` : "";

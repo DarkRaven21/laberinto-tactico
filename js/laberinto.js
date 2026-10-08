@@ -1,6 +1,6 @@
 import { ENEMY_TYPES } from "./enemies.js";
 import { generateEncounter } from "./encounter.js";
-import { getProgress, rest as restProgress, resetProgress, restBeacon, advanceLevel } from "./progress.js";
+import { getProgress, rest as restProgress, resetProgress, restBeacon, advanceLevel, enterRift } from "./progress.js";
 import { requireSession } from "./session.js";
 import { getBank } from "./citybank.js";
 import { ICON_COINS, ICON_HOURGLASS } from "./icons.js";
@@ -29,10 +29,29 @@ const PUERTA_START_ROOM = 6;
 const PUERTA_BASE_CHANCE = 0.05;
 const PUERTA_MAX_CHANCE = 0.40;
 
-// paths: array de objetos { type: "encounter", enemies: [...] } o
-// { type: "puerta" } (a lo sumo uno por visita a un nivel).
+// paths: array de objetos { type: "encounter", enemies: [...] },
+// { type: "puerta" } (a lo sumo uno por visita a un nivel),
+// { type: "rift" } (entrada a la grieta, ver más abajo) o, estando
+// dentro de una grieta, un único { type: "riftRoom", enemies: [...] }.
 let paths = [];
 let currentProgress = null;
+
+// ---------- Grietas ----------
+// El servidor dice si hay una grieta que puede aparecer en esta corrida
+// (progress.availableRift: tenés el alma, es del nivel, no entraste a
+// otra) o si ya estás dentro (progress.rift). La tirada de aparición y
+// la sala mínima se aplican acá al armar los caminos, igual que la
+// Puerta; enter-rift las vuelve a validar.
+(function injectRiftStyle() {
+    const style = document.createElement("style");
+    style.textContent = `
+        .path-card.path-card-rift { border-color: #b57ad6; box-shadow: 0 0 14px rgba(181, 122, 214, 0.35); }
+        .path-card.path-card-rift .path-name { color: #d7b4f0; }
+        .path-card.path-card-rift-room { border-color: #b57ad6; }
+        .rift-hint { font-size: 12px; color: #c9a6e6; }
+    `;
+    document.head.appendChild(style);
+})();
 
 // Oro del banco (ciudad). Se lee una vez al entrar: mientras estás en el
 // laberinto no cambia. El oro que se muestra es banco + lo ganado en esta
@@ -110,17 +129,35 @@ function buildPaths(count, room, level) {
         const idx = Math.floor(Math.random() * built.length);
         built[idx] = { type: "puerta" };
     }
+    // Grieta: independiente de la Puerta. Reemplaza un camino normal; si
+    // no queda ninguno (un solo camino y es la Puerta), se agrega aparte.
+    const rift = currentProgress?.availableRift;
+    if (rift && room >= rift.min_room && Math.random() < rift.appear_chance) {
+        const normal = built.map((p, i) => p.type === "encounter" ? i : -1).filter(i => i !== -1);
+        if (normal.length) built[normal[Math.floor(Math.random() * normal.length)]] = { type: "rift" };
+        else built.push({ type: "rift" });
+    }
     return built;
 }
 
 function updateRoomLabel(room) {
     const el = document.getElementById("roomLabel");
-    if (el) el.textContent = `Sala ${room}`;
+    const rift = currentProgress?.rift;
+    if (el) el.textContent = rift
+        ? `${rift.label} · ${rift.is_boss ? "Jefe" : `Sala ${rift.room} de ${rift.total_rooms}`}`
+        : `Sala ${room}`;
 }
 
 function updateHoursLabel(hours) {
     const el = document.getElementById("hoursLabel");
-    if (el) el.innerHTML = `${ICON_HOURGLASS} ${hours}h restantes`;
+    if (el) el.innerHTML = currentProgress?.rift
+        ? `${ICON_HOURGLASS} ${hours}h restantes (el tiempo está detenido)`
+        : `${ICON_HOURGLASS} ${hours}h restantes`;
+}
+
+// Dentro de la grieta no se descansa: se ocultan los dos botones.
+function setRestVisible(visible) {
+    document.querySelectorAll("#restBtn, #restBtnCard").forEach(b => { b.style.display = visible ? "" : "none"; });
 }
 
 function updatePlayerStats(progress) {
@@ -141,6 +178,14 @@ async function rollNewLaberinto() {
     updateRoomLabel(currentProgress.room);
     updateHoursLabel(currentProgress.hours_remaining);
     updatePlayerStats(currentProgress);
+    // Dentro de una grieta: un solo camino, el de la sala actual.
+    if (currentProgress.rift) {
+        setRestVisible(false);
+        paths = [{ type: "riftRoom", enemies: currentProgress.rift.enemies }];
+        render();
+        return;
+    }
+    setRestVisible(true);
     if (currentProgress.hours_remaining <= 0) {
         showLaberintoClosed();
         return;
@@ -245,6 +290,45 @@ async function choosePuerta() {
     render();
 }
 
+// Entrar a la grieta: se confirman las horas pendientes (como al elegir
+// un camino) y el servidor guarda sala y horas para devolverlas al salir.
+async function chooseRift() {
+    const rift = currentProgress.availableRift;
+    if (!rift) return;
+    const ok = confirm(`¿Entrar a ${rift.label}? Adentro el tiempo se detiene: no vas a poder descansar ni salir hasta vencer al jefe. Si caés, es una derrota normal.`);
+    if (!ok) return;
+    try {
+        await flushRest();
+        await enterRift(rift.key);
+    } catch (err) {
+        alert(err.message || "No se pudo entrar a la grieta.");
+    }
+    await rollNewLaberinto();
+}
+
+// Tarjeta con los enemigos, XP y oro de un encuentro (caminos y grieta).
+function encounterCardHtml(title, encounter, extraClass = "") {
+    const enemiesHtml = encounter.map(key => {
+        const cfg = ENEMY_TYPES[key];
+        return `
+            <div class="enemy-chip enemy-${cfg.family}">
+                <img class="enemy-chip-icon" src="${cfg.icon}" alt="${cfg.label}">
+                <span class="enemy-chip-label">${cfg.label}</span>
+            </div>`;
+    }).join("");
+    const { xp, gold } = encounterRewards(encounter);
+    const rewardText = xp > 0 ? `XP ${xp} · Oro ${gold}` : `Oro ${gold}`;
+    const namesLine = encounter.map(key => ENEMY_TYPES[key].label).join(" · ");
+    return `
+        <div class="path-header">
+            <span class="path-name">${title}</span>
+            <span class="path-xp">${rewardText}</span>
+        </div>
+        <div class="path-enemies">${enemiesHtml}</div>
+        <div class="path-names">${namesLine}</div>
+    `;
+}
+
 function render() {
     const container = document.getElementById("pathsList");
     container.innerHTML = "";
@@ -266,32 +350,33 @@ function render() {
             return;
         }
 
+        if (path.type === "rift") {
+            card.className = "path-card path-card-rift";
+            card.innerHTML = `
+                <div class="path-header">
+                    <span class="path-name">${currentProgress.availableRift.label}</span>
+                </div>
+                <div class="path-enemies"><span class="rift-hint">Una grieta se abre ante vos…</span></div>
+            `;
+            card.addEventListener("click", chooseRift);
+            container.appendChild(card);
+            return;
+        }
+
+        if (path.type === "riftRoom") {
+            const rift = currentProgress.rift;
+            card.className = "path-card path-card-rift-room";
+            card.innerHTML = encounterCardHtml(rift.is_boss ? "Jefe de la grieta" : `Sala ${rift.room} de ${rift.total_rooms}`, path.enemies);
+            card.addEventListener("click", () => chooseTrail(path.enemies));
+            container.appendChild(card);
+            return;
+        }
+
         card.className = "path-card";
         const encounter = path.enemies;
-        const enemiesHtml = encounter.map(key => {
-            const cfg = ENEMY_TYPES[key];
-            return `
-                <div class="enemy-chip enemy-${cfg.family}">
-                    <img class="enemy-chip-icon" src="${cfg.icon}" alt="${cfg.label}">
-                    <span class="enemy-chip-label">${cfg.label}</span>
-                </div>`;
-        }).join("");
-
-        // XP solo de lo que todavía te da XP; oro siempre.
-        const { xp, gold } = encounterRewards(encounter);
-        const rewardText = xp > 0 ? `XP ${xp} · Oro ${gold}` : `Oro ${gold}`;
-        // Nombres en una línea: solo se ve en el celular, donde los chips
-        // muestran únicamente el ícono (ver laberinto2.css).
-        const namesLine = encounter.map(key => ENEMY_TYPES[key].label).join(" · ");
-
-        card.innerHTML = `
-            <div class="path-header">
-                <span class="path-name">Camino ${i + 1}</span>
-                <span class="path-xp">${rewardText}</span>
-            </div>
-            <div class="path-enemies">${enemiesHtml}</div>
-            <div class="path-names">${namesLine}</div>
-        `;
+        // XP solo de lo que todavía te da XP; oro siempre. La línea de
+        // nombres solo se ve en el celular (ver laberinto2.css).
+        card.innerHTML = encounterCardHtml(`Camino ${i + 1}`, encounter);
         card.addEventListener("click", () => chooseTrail(encounter));
         container.appendChild(card);
     });

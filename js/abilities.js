@@ -728,4 +728,33 @@ export const ABILITIES = {
         summon: "bloodGnome",
         desc: "Invoca un Blood Gnome a tu lado · CD 8"
     },
+
+    // ---------- Grieta: Guarida del Rey Goblin ----------
+    // Goblin King. Área de radio 2 que lastima a TODOS los que agarra,
+    // también a sus goblins (sin opponentsOnly). Usa los stats de Trampa.
+    fireBomb: {
+        name: "Bomba de Fuego", range: 3, apCost: 3, cooldown: 4, needsTarget: true, targetType: "area",
+        aoeRadius: 2,
+        damageStats: ["Ingenio", "Inteligencia", "Paciencia", "Suerte"],
+        damageMultiplier: 3.2,
+        damageType: "fuego",
+        fx: { projectile: "orb", arc: true },
+        desc: "Alcance 3 · Área radio 2 · Daña a todos, también a tus aliados · CD 4"
+    },
+    // Goblin King: invoca un goblin distinto por turno (CD 4 cada uno).
+    summonGoblinShaman: {
+        name: "Invocar Chamán Goblin", range: 0, apCost: 3, cooldown: 4, needsTarget: false,
+        summon: "goblinShaman",
+        desc: "Invoca un Goblin Shaman a tu lado · CD 4"
+    },
+    summonGoblinAssassin: {
+        name: "Invocar Asesino Goblin", range: 0, apCost: 3, cooldown: 4, needsTarget: false,
+        summon: "goblinAssassin",
+        desc: "Invoca un Goblin Assassin a tu lado · CD 4"
+    },
+    summonGoblinTrapper: {
+        name: "Invocar Trampero Goblin", range: 0, apCost: 3, cooldown: 4, needsTarget: false,
+        summon: "goblinTrapper",
+        desc: "Invoca un Goblin Trapper a tu lado · CD 4"
+    },
 };
