@@ -32,7 +32,8 @@ export const PASSIVES = {
     thickSkin: {
         name: "Piel Gruesa",
         hpThreshold: 0.5,
-        passiveReduction: { stats: ["Resistencia", "Sensibilidad al dolor", "Entereza", "Voluntad"], divisor: 4 }
+        // capByPlayerLevel: la reducción nunca supera el nivel del jugador.
+        passiveReduction: { stats: ["Resistencia", "Sensibilidad al dolor", "Entereza", "Voluntad"], divisor: 4, capByPlayerLevel: true }
     },
     inPain: {
         name: "En Agonía",

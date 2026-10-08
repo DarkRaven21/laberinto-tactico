@@ -236,6 +236,7 @@ function spawnSummon(caster, type, pos) {
     unit.cls = cfg.family;
     unit.xp = 0;
     unit.summoned = true;
+    unit.summonerId = caster.id || "player";
     unit.side = side;
     unit.pos = pos;
     if (side === "player") state.allies.push(unit);
@@ -1507,7 +1508,11 @@ function passiveReductionOf(unit) {
         const p = PASSIVES[key];
         if (unit.passivesActive[key] && p.passiveReduction) {
             const avg = averageStats(unit, p.passiveReduction.stats);
-            total += Math.max(1, Math.floor(avg / p.passiveReduction.divisor));
+            let reduction = Math.max(1, Math.floor(avg / p.passiveReduction.divisor));
+            // Tope opcional: el nivel del jugador (Piel Gruesa). Vale para
+            // cualquiera que tenga la pasiva, jugador o criatura.
+            if (p.passiveReduction.capByPlayerLevel) reduction = Math.min(reduction, PLAYER_CONFIG.level || 1);
+            total += reduction;
         }
     });
     return total;
@@ -1924,14 +1929,22 @@ async function runUnitAiTurn(u) {
         if (shieldKey) {
             const sab = ABILITIES[shieldKey];
             const amount = computeAbilityShield(u, shieldKey);
-            const candidates = selfAndAlliesOf(u)
-                .filter(a => (a.shield || 0) < amount && inAbilityRange(u, a.pos, sab))
+            const canGet = a => (a.shield || 0) < amount && inAbilityRange(u, a.pos, sab);
+            const allies = alliesOf(u).filter(canGet)
                 .sort((a, b) => (a.hp / a.maxHp) - (b.hp / b.maxHp));
-            // Prioridad: un aliado curador (sostiene al resto), después el más
-            // golpeado, y si no hay ninguno, a sí mismo.
-            const healer = candidates.find(a => a !== u && healAbilitiesOf(a).length > 0);
-            const injured = candidates.find(a => a !== u && a.hp < a.maxHp);
-            const target = healer || injured || (candidates.includes(u) ? u : null);
+            // Prioridad, siempre un aliado antes que sí mismo:
+            //   1) un curador (sostiene al resto),
+            //   2) el más golpeado,
+            //   3) su invocado más reciente (el Rey Goblin escuda al que acaba de llamar),
+            //   4) el aliado más cercano a su blanco (el que va a recibir los golpes).
+            // Solo si no hay ningún aliado a alcance se lo pone a sí mismo.
+            const myId = u.id || "player";
+            const healer = allies.find(a => healAbilitiesOf(a).length > 0);
+            const injured = allies.find(a => a.hp < a.maxHp);
+            const mySummons = allies.filter(a => a.summonerId === myId);
+            const latestSummon = mySummons[mySummons.length - 1];
+            const frontliner = allies.slice().sort((a, b) => manhattan(a.pos, p.pos) - manhattan(b.pos, p.pos))[0];
+            const target = healer || injured || latestSummon || frontliner || (canGet(u) ? u : null);
             if (target) {
                 await performShield(u, target, shieldKey);
                 continue;
