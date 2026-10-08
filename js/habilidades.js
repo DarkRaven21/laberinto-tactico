@@ -30,7 +30,7 @@ function avg(list) {
 
 // Atributos que usa la habilidad para su efecto principal, sin repetir.
 function usedStats(ab) {
-    const lists = [ab.damageStats, ab.reductionStats, ab.healStats, ab.buffStats, ab.dodgeStats];
+    const lists = [ab.damageStats, ab.reductionStats, ab.healStats, ab.shieldStats, ab.buffStats, ab.dodgeStats];
     const seen = new Set();
     const out = [];
     lists.forEach(list => (list || []).forEach(st => {
@@ -52,7 +52,9 @@ function resultParts(ab) {
             const crit = Math.ceil(dmg * (ab.critMultiplier ?? 1.5));
             parts.push(`${Math.round(ab.critChance * 100)}% de crítico (${crit})`);
         }
-        if (ab.aoeRadius) parts.push(`Área ${ab.aoeRadius}`);
+        if (ab.leapAttack) parts.push("Saltás a la casilla y dañás a los rivales pegados");
+        else if (ab.aoeRadius) parts.push(`Área ${ab.aoeRadius}`);
+        if (ab.opponentsOnly && !ab.leapAttack) parts.push("Solo a rivales");
         if (ab.pullsToMelee) parts.push("Atrae al objetivo");
         if (ab.debuffStats) parts.push("Maldice");
         if (ab.debuffPercent) parts.push("Ciega");
@@ -70,6 +72,9 @@ function resultParts(ab) {
     }
     if (ab.healStats) {
         parts.push(`Cura ${Math.floor(avg(ab.healStats) * (ab.healMultiplier ?? 1))}`);
+    }
+    if (ab.shieldStats) {
+        parts.push(`Escudo de ${Math.floor(avg(ab.shieldStats) * (ab.shieldMultiplier ?? 1))} a un aliado o a vos`);
     }
     if (ab.buffStats) {
         if (ab.buffType === "AP") {

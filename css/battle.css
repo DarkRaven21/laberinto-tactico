@@ -227,6 +227,30 @@ svg.lucide-icon {
 .player-unit .unit-hp-fill { background: var(--teal); }
 .enemy-unit .unit-hp-fill { background: var(--crimson); }
 
+/* Escudo (habilidad Escudo): barra fina encima de la vida */
+.unit-shield {
+    position: absolute;
+    left: 10px;
+    right: 10px;
+    bottom: 11px;
+    height: 3px;
+    z-index: 2;
+    border-radius: 2px;
+    background: rgba(10, 12, 10, 0.6);
+    pointer-events: none;
+}
+.unit-shield-fill {
+    height: 100%;
+    border-radius: 2px;
+    background: #cfe8ff;
+    box-shadow: 0 0 4px rgba(160, 210, 255, 0.9);
+}
+.nameplate-shield {
+    color: #cfe8ff;
+    font-weight: 600;
+    margin-left: 3px;
+}
+
 /* Arte del bioma dentro de la casilla (árbol, arbusto, pasto) */
 .cell-art {
     position: absolute;
@@ -453,6 +477,28 @@ svg.lucide-icon {
 .biome-ice .cell.active.tone-2 { background: radial-gradient(circle at 45% 65%, #f2f7f9 0, #dfe9ee 70%); }
 /* Las bloqueadas son nieve; el lago helado lo pone el obstáculo "frozenPond" */
 .biome-ice .cell:not(.active) { background: #d2dfe6; }
+
+/* ---- Montaña (familia mind) ---- */
+.board-wrap.biome-mountain {
+    border-color: #5a5650;
+    background:
+        radial-gradient(ellipse at 20% 15%, #6d7480 0%, transparent 55%),
+        radial-gradient(ellipse at 85% 85%, #3e3a44 0%, transparent 50%),
+        #4c4e55;
+}
+/* Aire frío de altura y un leve resplandor violeta de los cristales */
+.board-wrap.biome-mountain::after {
+    background:
+        radial-gradient(circle at 28% 22%, rgba(220, 230, 240, 0.08) 0, transparent 26%),
+        radial-gradient(circle at 72% 68%, rgba(194, 122, 224, 0.07) 0, transparent 22%),
+        radial-gradient(circle at 18% 78%, rgba(194, 122, 224, 0.05) 0, transparent 16%),
+        radial-gradient(ellipse at 50% 50%, transparent 60%, rgba(0, 0, 0, 0.22) 100%);
+}
+.biome-mountain .cell.active.tone-0 { background: radial-gradient(circle at 35% 30%, #8d877d 0, #7a746a 70%); }
+.biome-mountain .cell.active.tone-1 { background: radial-gradient(circle at 60% 40%, #868076 0, #736d64 70%); }
+.biome-mountain .cell.active.tone-2 { background: radial-gradient(circle at 45% 65%, #938d83 0, #7f796f 70%); }
+/* Las bloqueadas son roca; la grieta al vacío la pone el obstáculo "chasm" */
+.biome-mountain .cell:not(.active) { background: #5e5951; }
 
 @media (prefers-reduced-motion: reduce) {
     .board-wrap[class*="biome-"]::after,
@@ -869,6 +915,7 @@ svg.lucide-icon {
 .fx-shadow { --fx-light: #d9c8f0; --fx-main: #5b3f8a; --fx-dark: #1e1430; --fx-glow: rgba(70, 40, 120, 0.9); }
 .fx-plant  { --fx-light: #d8f5a8; --fx-main: #5fa83a; --fx-dark: #2f6b1f; --fx-glow: rgba(95, 168, 58, 0.8); }
 .fx-electric { --fx-light: #eaf6ff; --fx-main: #4da3ff; --fx-dark: #1f5fd1; --fx-glow: rgba(77, 163, 255, 0.95); }
+.fx-psychic { --fx-light: #ffe3fb; --fx-main: #e05cc8; --fx-dark: #8a2a8f; --fx-glow: rgba(224, 92, 200, 0.9); }
 
 /* Formas del proyectil (campo fx.projectile de cada habilidad) */
 .fx-bolt.fx-shape-arrow {
@@ -948,6 +995,7 @@ svg.lucide-icon {
 .fx-blast.fx-poison { background: radial-gradient(circle, #e6d2f5 0, #b58ad8 35%, rgba(122, 79, 168, 0.55) 60%, transparent 76%); }
 .fx-blast.fx-shadow { background: radial-gradient(circle, #b9a3dc 0, #4a2f78 35%, rgba(20, 10, 35, 0.7) 60%, transparent 76%); }
 .fx-blast.fx-plant { background: radial-gradient(circle, #e2f8bf 0, #6fbf45 35%, rgba(47, 107, 31, 0.55) 60%, transparent 76%); }
+.fx-blast.fx-psychic { background: radial-gradient(circle, #ffe9fb 0, #e05cc8 35%, rgba(138, 42, 143, 0.6) 60%, transparent 76%); }
 .fx-blast.fx-electric { background: radial-gradient(circle, #f2f9ff 0, #4da3ff 35%, rgba(31, 95, 209, 0.6) 60%, transparent 76%); }
 
 @keyframes fxQuake {
@@ -981,6 +1029,7 @@ svg.lucide-icon {
 .fx-spark.fx-poison { background: #c9a6e6; box-shadow: 0 0 6px #7a4fa8; }
 .fx-spark.fx-shadow { background: #3a2560; box-shadow: 0 0 6px #8a6ac4; }
 .fx-spark.fx-plant { background: #9ad86a; box-shadow: 0 0 6px #5fa83a; }
+.fx-spark.fx-psychic { background: #ffc6f2; box-shadow: 0 0 6px #e05cc8; }
 .fx-spark.fx-electric { width: 4px; height: 4px; background: #eaf6ff; box-shadow: 0 0 6px #4da3ff, 0 0 2px #ffffff; }
 
 /* ---- Hielo ---- */
@@ -1091,6 +1140,30 @@ svg.lucide-icon {
     animation: fxFlash 0.55s ease-out both;
 }
 
+/* ---- Psíquico: ondas que se abren desde el centro ---- */
+@keyframes fxPsyWave {
+    0% { transform: scale(0.15); opacity: 0.95; }
+    100% { transform: scale(3.6); opacity: 0; }
+}
+.fx-psy-wave {
+    position: absolute;
+    left: calc(50% - 11px);
+    top: calc(50% - 11px);
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    border: 2px solid #f39be3;
+    box-shadow: 0 0 8px rgba(224, 92, 200, 0.85), inset 0 0 6px rgba(224, 92, 200, 0.6);
+    animation: fxPsyWave 0.6s ease-out both;
+}
+.fx-psy-glow {
+    position: absolute;
+    inset: 0;
+    border-radius: 6px;
+    background: radial-gradient(circle, rgba(255, 210, 247, 0.55) 0, rgba(224, 92, 200, 0.3) 45%, transparent 76%);
+    animation: fxFade 0.7s ease-out both;
+}
+
 /* ---- Curación ---- */
 .fx-heal-glow {
     position: absolute;
@@ -1179,6 +1252,7 @@ svg.lucide-icon {
     /* Rayo sin parpadeo: aparece y se desvanece */
     .fx-lightning,
     .fx-flash { animation: fxFade 0.5s ease-out both; }
+    .fx-psy-wave { animation: fxFade 0.5s ease-out both; }
 }
 
 /* ---- Pantallas angostas (celular): el panel lateral baja debajo del

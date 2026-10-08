@@ -60,7 +60,7 @@ export async function animateHeal(pos, heal) {
 //   fx: { effect: "poison", projectile: "dart", arc: false }
 //
 //   effect     → look del impacto y color: slash, fire, ice, acid,
-//                poison, arcane, shadow, plant, electric. Si falta, sale del damageType.
+//                poison, arcane, shadow, plant, electric, psychic. Si falta, sale del damageType.
 //   projectile → qué viaja cuando el ataque es a distancia:
 //                "arrow" (flecha fina), "dart" (dardo con estela),
 //                "orb" (bola) o "none" (sin proyectil, impacto directo).
@@ -81,7 +81,8 @@ const FX_BY_DAMAGE_TYPE = {
     magic: "arcane",
     oscuro: "shadow",
     planta: "plant",
-    electric: "electric"
+    electric: "electric",
+    psychic: "psychic"
 };
 const FX_DEFAULT_PROJECTILE = {
     slash: "arrow",
@@ -189,6 +190,11 @@ function fxImpact(pos, kind) {
         fxEl(layer, "fx-flash");
         fxEl(layer, "fx-lightning");
         fxBurst(fxEl(layer, "fx-origin"), "fx-spark fx-electric", 9, 22, 48, 4);
+    } else if (kind === "psychic") {
+        // Psíquico: ondas rosadas que se abren desde el centro y chispas que suben.
+        fxEl(layer, "fx-psy-glow");
+        [0, 0.1, 0.2].forEach(d => fxEl(layer, "fx-psy-wave", { "animation-delay": `${d}s` }));
+        fxBurst(fxEl(layer, "fx-origin"), "fx-spark fx-psychic", 8, 20, 44, 16);
     } else if (kind === "plant") {
         // Latigazo: dos trazos verdes y hojas que saltan.
         fxEl(layer, "fx-streak", { "--r": "-20deg" });

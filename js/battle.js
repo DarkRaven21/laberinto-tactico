@@ -99,6 +99,9 @@ function freshUnit(cfg) {
         moveBonusPending: 0,    // PM extra que llegan al arrancar su próximo turno (ej: Magic Shield)
         tempStatBoosts: null,   // { stat: +x } solo durante el turno actual (ej: Arcane Focus)
         defendActive: false,
+        // Escudo (habilidad Escudo): vida extra que se gasta antes que la
+        // vida. Dura hasta gastarse. Ver performShield / applyDamage.
+        shield: 0,
         defendReduction: 0,
         defendMagicResistant: false,
         defendRetaliateMultiplier: 0,
@@ -802,6 +805,45 @@ async function performHeal(caster, target, key) {
     checkGameOver();
 }
 
+// Salto con ataque (leapAttack): mueve a quien lo usa a `pos` (puede
+// pisar una trampa) y, si sigue en pie, daña el área alrededor de donde
+// cayó. El costo y el CD los aplica performAreaAttack.
+async function leapAndStrike(u, pos, key) {
+    const ab = ABILITIES[key];
+    await sleep(120);
+    u.pos = pos;
+    addLog(`${u === state.player ? "Jugador" : u.label} usa ${ab.name}.`);
+    renderBoard();
+    renderSide();
+    renderLog();
+    await safely(() => triggerTrapIfAny(u, pos));
+    if (state.gameOver || u.hp <= 0) return;
+    await safely(() => performAreaAttack(u, u.pos, key));
+}
+
+// Escudo sobre un aliado (o sobre uno mismo). No se suma con el que ya
+// tenía: queda el más grande.
+async function performShield(caster, target, key) {
+    if (caster.hp <= 0) return;
+    const ab = ABILITIES[key];
+    caster.ap -= ab.apCost;
+    if (ab.cooldown) caster.cooldowns[key] = ab.cooldown;
+    if (caster === state.player) {
+        renderHand();
+        await animateCardCast(key);
+    }
+    const amount = computeAbilityShield(caster, key);
+    const before = target.shield || 0;
+    target.shield = Math.max(before, amount);
+    const casterLabel = caster === state.player ? "Jugador" : caster.label;
+    addLog(before >= amount
+        ? `${casterLabel} usa ${ab.name} sobre ${nameOf(target)}, pero ya tenía un escudo igual o mayor (${before}).`
+        : `${casterLabel} usa ${ab.name} sobre ${nameOf(target)}: escudo de ${target.shield}.`);
+    render();
+    fxAura(target.pos, "shield");
+    await sleep(450);
+}
+
 // Buff con blanco sobre un aliado (o sobre uno mismo). Por ahora solo
 // buffType "AP" (Empower). Sobre otro: apBonusPending, que se suma al
 // arrancar SU próximo turno (los PA se recalculan al inicio de cada
@@ -1229,22 +1271,39 @@ async function handleCellClick(i) {
             state.selection = null;
             state.busy = true;
             render();
-            await safely(() => ab.buffType ? performAllyBuff(u, target, key) : performHeal(u, target, key));
+            await safely(() => ab.shieldStats ? performShield(u, target, key)
+                : ab.buffType ? performAllyBuff(u, target, key) : performHeal(u, target, key));
             state.busy = false;
             render();
             return;
         }
 
-        if (key === "salto") {
+        // Salto con ataque (Salto Perforante): cae en la casilla vacía y
+        // después daña alrededor (performAreaAttack cobra PA y CD).
+        if (ab.leapAttack) {
+            if (!state.cells[i].active) return;
+            if (unitAt(i)) return;
+            state.selection = null;
+            state.busy = true;
+            render();
+            await leapAndStrike(u, i, key);
+            state.busy = false;
+            render();
+            return;
+        }
+
+        // Habilidades que mueven a una casilla vacía (Salto, Teletransporte).
+        if (ab.targetType === "empty") {
             if (!state.cells[i].active) return;
             if (unitAt(i)) return;
             state.selection = null;
             state.busy = true;
             u.ap -= ab.apCost;
+            if (ab.cooldown) u.cooldowns[key] = ab.cooldown;
             render();
             await sleep(120);
             u.pos = i;
-            addLog(`Jugador salta a otra casilla.`);
+            addLog(key === "salto" ? `Jugador salta a otra casilla.` : `Jugador usa ${ab.name}.`);
             renderBoard();
             renderSide();
             renderLog();
@@ -1353,6 +1412,14 @@ function computeAbilityDamage(unit, key, target) {
     let dmg = Math.floor(avg * mult);
     if (unit.commandActive) dmg += unit.commandBonus;
     return Math.max(1, dmg);
+}
+
+// Escudo: mismo criterio que la cura, floor(floor(promedio) x multiplicador).
+function computeAbilityShield(unit, key) {
+    const ab = ABILITIES[key];
+    const avg = averageStats(unit, ab.shieldStats);
+    const mult = ab.shieldMultiplier != null ? ab.shieldMultiplier : 1;
+    return Math.floor(avg * mult);
 }
 
 function computeAbilityHeal(unit, key) {
@@ -1540,6 +1607,13 @@ function applyDamage(unit, rawDamage, damageType = "normal") {
         totalReduction += reduction;
     }
     dmg = Math.max(0, dmg - totalReduction);
+    // El escudo absorbe después de las reducciones; lo que pasa va a la vida.
+    if (unit.shield > 0 && dmg > 0) {
+        const absorbed = Math.min(unit.shield, dmg);
+        unit.shield -= absorbed;
+        dmg -= absorbed;
+        addLog(`El escudo de ${nameOf(unit)} absorbe ${absorbed}${unit.shield > 0 ? ` (le quedan ${unit.shield})` : " y se rompe"}.`);
+    }
     unit.hp = Math.max(0, unit.hp - dmg);
     checkPassives(unit);
     return { dmg, dodged: false };
@@ -1821,6 +1895,53 @@ async function runUnitAiTurn(u) {
             continue;
         }
 
+        // Escudo: al aliado más golpeado (proporción de vida) que esté a
+        // alcance y no tenga ya un escudo igual o mayor; si no hay, a sí mismo.
+        const shieldKey = u.abilities.find(k => {
+            const sab = ABILITIES[k];
+            return sab.shieldStats && u.ap >= sab.apCost && !(sab.cooldown && u.cooldowns[k] > 0);
+        });
+        if (shieldKey) {
+            const sab = ABILITIES[shieldKey];
+            const amount = computeAbilityShield(u, shieldKey);
+            const candidates = selfAndAlliesOf(u)
+                .filter(a => (a.shield || 0) < amount && inAbilityRange(u, a.pos, sab))
+                .sort((a, b) => (a.hp / a.maxHp) - (b.hp / b.maxHp));
+            const injured = candidates.find(a => a !== u && a.hp < a.maxHp);
+            const target = injured || (candidates.includes(u) ? u : null);
+            if (target) {
+                await performShield(u, target, shieldKey);
+                continue;
+            }
+        }
+
+        // Salto con ataque: la casilla vacía a su alcance donde, al caer,
+        // deje más rivales en el área. Empate: la más cercana a su blanco.
+        // Si no alcanza a nadie, no lo usa.
+        const leapKey = u.abilities.find(k => {
+            const lab = ABILITIES[k];
+            return lab.leapAttack && u.ap >= lab.apCost && !(lab.cooldown && u.cooldowns[k] > 0);
+        });
+        if (leapKey) {
+            const lab = ABILITIES[leapKey];
+            const occupied = new Set(allUnits().filter(x => x.hp > 0).map(x => x.pos));
+            const opps = opponentsOf(u);
+            let best = -1, bestHits = 0, bestTie = Infinity;
+            state.cells.forEach((c, n) => {
+                if (!c.active || occupied.has(n) || manhattan(u.pos, n) > lab.range) return;
+                const area = new Set(resolveAoeCells(n, lab.aoeRadius).filter(x => x !== n));
+                const hits = opps.filter(o => area.has(o.pos)).length;
+                if (!hits) return;
+                const tie = manhattan(n, p.pos);
+                if (hits > bestHits || (hits === bestHits && tie < bestTie)) { best = n; bestHits = hits; bestTie = tie; }
+            });
+            if (best !== -1) {
+                await leapAndStrike(u, best, leapKey);
+                if (state.gameOver) break;
+                continue;
+            }
+        }
+
         // Invocar: cada vez que pueda (el CD largo lo limita).
         const summonKey = summonAbilitiesOf(u).find(key => canSummonNow(u, key));
         if (summonKey) {
@@ -1991,20 +2112,29 @@ async function runUnitAiTurn(u) {
 
             if (moved) continue;
 
-            if (u.abilities.includes("salto") && u.ap >= ABILITIES.salto.apCost) {
+            // Habilidades que mueven (Salto, Teletransporte): la casilla
+            // vacía a su alcance que más lo acerque al blanco.
+            const jumpKey = u.abilities.find(k => {
+                const jab = ABILITIES[k];
+                return jab.targetType === "empty" && !jab.leapAttack && u.ap >= jab.apCost && !(jab.cooldown && u.cooldowns[k] > 0);
+            });
+            if (jumpKey) {
+                const jab = ABILITIES[jumpKey];
                 const occupied = new Set(allUnits().filter(x => x !== u && x.hp > 0).map(x => x.pos));
                 let jumpCell = -1, jumpFieldDist = distToPlayer[u.pos];
-                for (const n of neighbors4(u.pos)) {
-                    if (!state.cells[n].active || occupied.has(n)) continue;
+                state.cells.forEach((c, n) => {
+                    if (!c.active || occupied.has(n) || n === u.pos) return;
+                    if (manhattan(u.pos, n) > jab.range) return;
                     const fieldDist = distToPlayer[n];
                     if (fieldDist < jumpFieldDist) { jumpFieldDist = fieldDist; jumpCell = n; }
-                }
+                });
                 if (jumpCell !== -1) {
-                    u.ap -= ABILITIES.salto.apCost;
+                    u.ap -= jab.apCost;
+                    if (jab.cooldown) u.cooldowns[jumpKey] = jab.cooldown;
                     renderBoard();
                     await sleep(120);
                     u.pos = jumpCell;
-                    addLog(`${u.label} usa Salto para acercarse ${toNameOf(p)}.`);
+                    addLog(`${u.label} usa ${jab.name} para acercarse ${toNameOf(p)}.`);
                     renderBoard();
                     renderLog();
                     await triggerTrapIfAny(u, jumpCell);
@@ -2277,9 +2407,12 @@ function renderBoard() {
                 || (!isPlayer && state.actingUnit === occupant);
             const iconCls = "unit-icon" + (occupant.commandActive ? " command-buffed" : "");
             const hpPct = Math.max(0, occupant.hp) / occupant.maxHp * 100;
-            div.innerHTML += (isPlayer ? "" : `<span class="unit-nameplate">${occupant.label} <span class="nameplate-hp">${Math.max(0, occupant.hp)}/${occupant.maxHp}</span></span>`)
+            const shieldPct = occupant.shield > 0 ? Math.min(100, occupant.shield / occupant.maxHp * 100) : 0;
+            const shieldText = occupant.shield > 0 ? ` <span class="nameplate-shield">+${occupant.shield}</span>` : "";
+            div.innerHTML += (isPlayer ? "" : `<span class="unit-nameplate">${occupant.label} <span class="nameplate-hp">${Math.max(0, occupant.hp)}/${occupant.maxHp}</span>${shieldText}</span>`)
                 + `<div class="unit-token">${acting ? `<span class="turn-ring"></span>` : ""}<img class="${iconCls}" src="${occupant.icon}" alt="${isPlayer ? "Jugador" : occupant.label}"></div>`
                 + `<div class="unit-hp"><div class="unit-hp-fill" style="width:${hpPct}%"></div></div>`
+                + (shieldPct ? `<div class="unit-shield"><div class="unit-shield-fill" style="width:${shieldPct}%"></div></div>` : "")
                 + (occupant.defendActive ? `<span class="defend-badge">🛡</span>` : "")
                 + (occupant.dodgeActive ? `<span class="dodge-badge">💨</span>` : "");
         }
@@ -2306,7 +2439,7 @@ function renderSide() {
     const p = state.player;
     document.getElementById("playerCard").classList.toggle("active-turn", state.turn === "player");
     document.getElementById("playerHpBar").style.width = (p.hp / p.maxHp * 100) + "%";
-    document.getElementById("playerHpText").textContent = `${p.hp}/${p.maxHp}`;
+    document.getElementById("playerHpText").textContent = `${p.hp}/${p.maxHp}` + (p.shield > 0 ? ` (+${p.shield})` : "");
     document.getElementById("playerMvBar").style.width = Math.min(100, p.move / p.maxMove * 100) + "%";
     document.getElementById("playerMvText").textContent = `${p.move}/${p.maxMove}`;
     document.getElementById("playerApBar").style.width = (p.ap / p.maxAp * 100) + "%";
@@ -2366,6 +2499,9 @@ function cardMetaShort(u, key) {
         for (const [stat, pct] of Object.entries(ab.selfStatBoost)) {
             parts.push(`${stat} +${Math.round(pct * 100)}%`);
         }
+    } else if (ab.shieldStats) {
+        parts.push(`Escudo ${computeAbilityShield(u, key)}`);
+        if (rangeText) parts.push(rangeText);
     } else if (ab.apGrantAll) {
         parts.push(`+${ab.apGrantAll} PA a todos`);
     } else if (ab.alliesNextTurnGrant) {
@@ -2435,6 +2571,8 @@ function renderHand() {
             desc = `Aumenta tu daño y el de tus aliados en ${buffPreview} hasta tu próximo turno · CD ${ab.cooldown}`;
         } else if (ab.apGrantAll) {
             desc = `+${ab.apGrantAll} PA ya para vos y +${ab.apGrantAll} PA a tus aliados en su próximo turno · CD ${ab.cooldown}`;
+        } else if (ab.shieldStats) {
+            desc = `Alcance ${ab.range} · Escudo de ${computeAbilityShield(u, key)} a un aliado o a vos (se gasta antes que la vida; no se suma) · CD ${ab.cooldown}`;
         } else if (ab.healStats) {
             const healPreview = computeAbilityHeal(u, key);
             desc = `Alcance ${ab.range} · Cura ${healPreview}`;

@@ -624,4 +624,108 @@ export const ABILITIES = {
         apGrantAll: 1,
         desc: "+1 PA ya para vos y +1 PA a tus aliados en su próximo turno · CD 3"
     },
+
+    // ---------- Familia mind (nivel 4) ----------
+    // Daño "psychic" (efecto propio en fx.js). Espada y Tajo Mental pegan
+    // con el arma (daño normal) pero se ven psíquicos (fx.effect).
+    // Mind Warrior. Sin CD: se puede usar varias veces por turno.
+    mindSword: {
+        name: "Espada Mental", range: 1, apCost: 1, cooldown: 0, needsTarget: true, targetType: "enemy",
+        damageStats: ["Atletismo", "Arma Melee", "Confianza", "Liderazgo", "Mentalidad táctica"],
+        damageMultiplier: 1.1,
+        damageType: "normal",
+        fx: { effect: "psychic" },
+        desc: "Alcance 1"
+    },
+    // Mind Slasher.
+    mindSlash: {
+        name: "Tajo Mental", range: 1, apCost: 1, cooldown: 1, needsTarget: true, targetType: "enemy",
+        damageStats: ["Reflejos", "Arma Melee", "Ingenio", "Persuasión", "Mentalidad táctica"],
+        damageMultiplier: 1.1,
+        damageType: "normal",
+        onHitMpDrain: 1,
+        fx: { effect: "psychic" },
+        desc: "Alcance 1 · -1 PM al golpeado · CD 1"
+    },
+    // Mind Destroyer.
+    stun: {
+        name: "Aturdir", range: 3, apCost: 2, cooldown: 2, needsTarget: true, targetType: "enemy",
+        damageStats: ["Foco Magico", "Inteligencia", "Mentalidad táctica", "Carisma"],
+        damageMultiplier: 2.3,
+        damageType: "psychic",
+        onHitApDrain: 1,
+        onHitMpDrain: 1,
+        desc: "Alcance 3 · -1 PA y -1 PM al golpeado · CD 2"
+    },
+    // Mind Destroyer / Master Mind. Sin CD.
+    shock: {
+        name: "Descarga", range: 3, apCost: 1, cooldown: 0, needsTarget: true, targetType: "enemy",
+        damageStats: ["Inteligencia", "Foco Magico", "Ingenio", "Persuasión"],
+        damageMultiplier: 0.9,
+        damageType: "psychic",
+        desc: "Alcance 3"
+    },
+    // Elder Brain.
+    mindPulse: {
+        name: "Pulso Mental", range: 6, apCost: 2, cooldown: 1, needsTarget: true, targetType: "enemy",
+        damageStats: ["Foco Magico", "Inspiracion", "Persuasión", "Carisma"],
+        damageMultiplier: 2.1,
+        damageType: "psychic",
+        desc: "Alcance 6 · CD 1"
+    },
+    // Master Mind. shieldStats: da un escudo (vida extra que se gasta
+    // antes que la vida) = floor(promedio × shieldMultiplier). Dura hasta
+    // gastarse; no se suma: queda el más grande. Ver performShield.
+    shield: {
+        name: "Escudo", range: 3, apCost: 1, cooldown: 3, needsTarget: true, targetType: "ally",
+        shieldStats: ["Confianza", "Inspiracion", "Liderazgo", "Foco Magico"],
+        shieldMultiplier: 1.7,
+        desc: "Alcance 3 · Escudo a un aliado o a vos · CD 3"
+    },
+    // Elder Brain. Como Salto (movesCaster), con más alcance y CD.
+    teleport: {
+        name: "Teletransporte", range: 2, apCost: 1, cooldown: 1, needsTarget: true, targetType: "empty",
+        desc: "Alcance 2 · Te mueve a la casilla · CD 1"
+    },
+
+    // ---------- Familia grok (nivel 4) ----------
+    // Grok Fighter / Giant Toad. leapAttack: salta a una casilla vacía a su
+    // alcance y daña en cruz alrededor de donde cae (selfCentered + radio 1),
+    // solo a rivales. Ver handleCellClick y la IA (paso "Salto con ataque").
+    pierceJump: {
+        name: "Salto Perforante", range: 2, apCost: 2, cooldown: 1, needsTarget: true, targetType: "empty",
+        leapAttack: true,
+        aoeRadius: 1,
+        selfCentered: true,
+        opponentsOnly: true,
+        damageStats: ["Atletismo", "Percepción", "Acrobacias", "Impetu", "Arma Melee"],
+        damageMultiplier: 1.75,
+        damageType: "normal",
+        desc: "Alcance 2 · Saltás a la casilla y dañás a los rivales pegados · CD 1"
+    },
+    // Grok Poisoner. Solo daña a rivales.
+    poisonCloud: {
+        name: "Nube Venenosa", range: 3, apCost: 3, cooldown: 3, needsTarget: true, targetType: "area",
+        aoeRadius: 2,
+        opponentsOnly: true,
+        damageStats: ["Afinidad mágica", "Creatividad", "Foco Magico", "Conocimiento", "Paciencia"],
+        damageMultiplier: 2.5,
+        damageType: "veneno",
+        desc: "Alcance 3 · Área radio 2 · Solo daña a rivales · CD 3"
+    },
+    // Grok Elder.
+    acidBubble: {
+        name: "Burbuja Ácida", range: 3, apCost: 3, cooldown: 3, needsTarget: true, targetType: "enemy",
+        damageStats: ["Capacidad pulmonar", "Agresividad", "Foco Magico", "Creatividad", "Resistencia Mágica"],
+        damageMultiplier: 3.3,
+        damageType: "acido",
+        fx: { projectile: "orb", arc: true },
+        desc: "Alcance 3 · CD 3"
+    },
+    // Grok Summoner.
+    summonBloodGnome: {
+        name: "Invocar Gnomo de Sangre", range: 0, apCost: 3, cooldown: 8, needsTarget: false,
+        summon: "bloodGnome",
+        desc: "Invoca un Blood Gnome a tu lado · CD 8"
+    },
 };

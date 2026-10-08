@@ -116,6 +116,20 @@ export const BIOMES = {
             { art: "snowDrift", chance: 0.16 }
         ]
     },
+    // Montaña (familia mind). Roca alta y fría, pinos de altura, grietas
+    // al vacío (pintan la casilla entera, como el agua) y cristales
+    // violetas que laten con la energía de las mentes.
+    mountain: {
+        name: "Montaña",
+        obstacles: ["mountainBoulder", "mountainBoulder", "mountainBoulder", "crag", "crag", "alpinePine", "alpinePine", "mindCrystal", "chasm"],
+        groundDecor: [
+            { art: "crystalShard", chance: 0.03 },
+            { art: "edelweiss", chance: 0.04 },
+            { art: "rockCrack", chance: 0.05 },
+            { art: "alpineGrass", chance: 0.07 },
+            { art: "pebbles", chance: 0.16 }
+        ]
+    },
 };
 
 // Familia → bioma. Una familia que no figure acá usa DEFAULT_BIOME.
@@ -130,6 +144,8 @@ export const FAMILY_BIOME = {
     seaNier: "beach",
     cave: "cave",
     ice: "ice",
+    mind: "mountain",
+    grok: "swamp",
 };
 export const DEFAULT_BIOME = "forest";
 
@@ -195,6 +211,12 @@ const OBSTACLE_ART = {
     frozenRock: svg(`<ellipse cx="50" cy="70" rx="34" ry="9" fill="rgba(40,70,90,0.28)"/><path d="M16 66 Q14 44 30 33 Q46 24 62 31 Q78 39 76 58 Q74 70 56 72 L30 72 Q18 72 16 66Z" fill="#6f7c86"/><path d="M62 31 Q78 39 76 58 Q74 70 56 72 Q66 56 62 31Z" fill="#5a6670"/><path d="M18 52 Q16 40 30 33 Q46 24 62 31 Q74 37 76 48 Q66 42 58 46 Q50 40 42 45 Q32 40 18 52Z" fill="#f2f7fa"/><path d="M30 34 Q44 27 56 30" stroke="#ffffff" stroke-width="2" fill="none" stroke-linecap="round"/><path d="M40 58 l8 5 l6 -3" stroke="#4c5761" stroke-width="1.5" fill="none"/>`),
     iceSpire: svg(`<circle cx="46" cy="46" r="30" fill="#bfeaff" opacity="0.18"/><ellipse cx="48" cy="76" rx="26" ry="6" fill="rgba(40,70,90,0.28)"/><path d="M30 76 L38 30 L48 76Z" fill="#8fd0ea"/><path d="M38 30 L48 76 L42 76Z" fill="#5fb3d6"/><path d="M42 76 L52 14 L62 76Z" fill="#a9dcef"/><path d="M52 14 L62 76 L55 76Z" fill="#74bfe0"/><path d="M58 76 L66 46 L72 76Z" fill="#8fd0ea"/><path d="M66 46 L72 76 L68 76Z" fill="#5fb3d6"/><path d="M50 24 L48 52 M37 40 l-2 14" stroke="#ffffff" stroke-width="1.6" stroke-linecap="round" opacity="0.85"/>`),
     frozenPond: svg(`<rect x="0" y="0" width="92" height="92" rx="3" fill="#9cc9dc"/><ellipse cx="34" cy="30" rx="34" ry="24" fill="#b6dceb" opacity="0.8"/><path d="M10 70 L32 52 L44 60 L66 40 M44 60 L52 82 M32 52 L28 34" stroke="#eaf6fb" stroke-width="1.6" fill="none" stroke-linecap="round" opacity="0.9"/><path d="M60 18 l10 6 M68 64 l12 4" stroke="#ffffff" stroke-width="2" stroke-linecap="round" opacity="0.7"/>`),
+    // Montaña
+    mountainBoulder: svg(`<ellipse cx="48" cy="74" rx="34" ry="8" fill="rgba(0,0,0,0.4)"/><path d="M12 70 Q10 46 26 34 Q40 24 58 28 Q76 33 80 52 Q82 70 62 73 L28 74 Q14 74 12 70Z" fill="#7b766e"/><path d="M58 28 Q76 33 80 52 Q82 70 62 73 Q72 54 58 28Z" fill="#625d56"/><path d="M22 46 Q34 34 50 34" stroke="#9a948a" stroke-width="3" fill="none" stroke-linecap="round"/><path d="M34 56 l8 6 l9 -5 l7 7" stroke="#4e4a44" stroke-width="1.6" fill="none"/><ellipse cx="30" cy="66" rx="9" ry="3" fill="#5f7a4a" opacity="0.7"/>`),
+    crag: svg(`<ellipse cx="46" cy="80" rx="30" ry="6" fill="rgba(0,0,0,0.4)"/><path d="M16 80 L30 40 L38 50 L48 10 L58 38 L66 30 L78 80Z" fill="#75706a"/><path d="M48 10 L58 38 L66 30 L78 80 L56 80 L52 44Z" fill="#5a5650"/><path d="M48 10 L42 26 L46 24 L50 30 L54 22Z" fill="#eef3f6"/><path d="M30 40 L27 50 L32 47 L36 52Z" fill="#e3eaee"/><path d="M40 58 l-3 14 M60 52 l3 16" stroke="#8b867e" stroke-width="1.6" stroke-linecap="round"/>`),
+    alpinePine: svg(`<ellipse cx="48" cy="80" rx="22" ry="5" fill="rgba(0,0,0,0.4)"/><rect x="44" y="66" width="8" height="14" fill="#4f3b2c"/><path d="M48 6 L64 32 L32 32Z" fill="#2c4a3a"/><path d="M48 20 L70 50 L26 50Z" fill="#284536"/><path d="M48 36 L74 70 L22 70Z" fill="#233e30"/><path d="M48 6 L64 32 L56 32Z M48 20 L70 50 L60 50Z M48 36 L74 70 L62 70Z" fill="#1a3226"/>`),
+    mindCrystal: svg(`<circle cx="46" cy="48" r="32" fill="#c27ae0" opacity="0.14"/><ellipse cx="48" cy="76" rx="30" ry="7" fill="rgba(0,0,0,0.4)"/><path d="M18 76 Q20 62 34 60 L62 60 Q76 62 78 76Z" fill="#6c6760"/><path d="M34 66 L40 26 L48 66Z" fill="#b57ad6"/><path d="M40 26 L48 66 L43 66Z" fill="#8a4fb0"/><path d="M44 66 L54 14 L64 66Z" fill="#c995ea"/><path d="M54 14 L64 66 L57 66Z" fill="#9a5cc2"/><path d="M60 66 L68 42 L74 66Z" fill="#b57ad6"/><path d="M68 42 L74 66 L70 66Z" fill="#8a4fb0"/><path d="M52 24 L50 50 M39 36 l-1 14" stroke="#f3dcff" stroke-width="1.6" stroke-linecap="round" opacity="0.9"/>`),
+    chasm: svg(`<rect x="0" y="0" width="92" height="92" rx="3" fill="#2a2724"/><path d="M0 0 H92 V14 Q70 22 46 16 Q22 10 0 18Z" fill="#5c574f"/><path d="M0 92 H92 V80 Q66 72 44 78 Q20 84 0 76Z" fill="#504b44"/><ellipse cx="46" cy="48" rx="40" ry="24" fill="#141210"/><ellipse cx="46" cy="50" rx="24" ry="12" fill="#0a0908"/><path d="M8 20 L14 30 M80 18 L76 30 M16 78 L22 70" stroke="#6f6a62" stroke-width="2" stroke-linecap="round"/>`),
 };
 
 // Decoración de suelo: dibujada centrada en x=46 y corrida al azar
@@ -252,6 +274,12 @@ const DECOR_ART = {
     pawPrints: `<g fill="#9fb4c3"><ellipse cx="36" cy="66" rx="4.2" ry="5"/><circle cx="32.5" cy="59.5" r="1.5"/><circle cx="36" cy="58.5" r="1.5"/><circle cx="39.5" cy="59.5" r="1.5"/><ellipse cx="54" cy="56" rx="4.2" ry="5"/><circle cx="50.5" cy="49.5" r="1.5"/><circle cx="54" cy="48.5" r="1.5"/><circle cx="57.5" cy="49.5" r="1.5"/></g>`,
     frozenPuddle: `<ellipse cx="46" cy="62" rx="17" ry="6.5" fill="#a9d6e8" opacity="0.75"/><path d="M36 62 l6 -2 l5 3 l7 -3" stroke="#ffffff" stroke-width="1" fill="none" opacity="0.8"/><ellipse cx="40" cy="60" rx="5" ry="1.3" fill="#ffffff" opacity="0.7"/>`,
     sparkle: `<path d="M38 56 v8 M34 60 h8 M54 64 v6 M51 67 h6 M50 50 v4 M48 52 h4" stroke="#ffffff" stroke-width="1.4" stroke-linecap="round"/><circle cx="38" cy="60" r="3" fill="#ffffff" opacity="0.35"/>`,
+    // Montaña
+    pebbles: `<ellipse cx="38" cy="62" rx="4" ry="3" fill="#5c574f"/><ellipse cx="50" cy="66" rx="3" ry="2.2" fill="#69645b"/><ellipse cx="56" cy="58" rx="2.5" ry="2" fill="#545049"/><ellipse cx="44" cy="70" rx="2" ry="1.6" fill="#625d55"/>`,
+    alpineGrass: `<path d="M38 70 Q40 58 42 70 M44 70 Q46 54 48 70 M50 70 Q53 60 55 70" stroke="#6f8a52" stroke-width="2" fill="none" stroke-linecap="round"/>`,
+    edelweiss: `<g fill="#f2f2ea"><circle cx="40" cy="60" r="2.4"/><circle cx="44" cy="60" r="2.4"/><circle cx="42" cy="56.6" r="2.4"/><circle cx="42" cy="63.4" r="2.4"/></g><circle cx="42" cy="60" r="1.5" fill="#d9c766"/><g fill="#eeeee4"><circle cx="54" cy="66" r="2"/><circle cx="57.4" cy="66" r="2"/><circle cx="55.7" cy="63.2" r="2"/></g><circle cx="55.7" cy="65.2" r="1.2" fill="#d9c766"/><path d="M42 66 v6 M56 69 v4" stroke="#6f8a52" stroke-width="1.4"/>`,
+    rockCrack: `<path d="M30 56 l8 4 l4 -3 l7 6 l6 -2 l8 5" stroke="#4a4640" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M45 57 l2 -6" stroke="#4a4640" stroke-width="1.3" stroke-linecap="round"/>`,
+    crystalShard: `<circle cx="46" cy="62" r="11" fill="#c27ae0" opacity="0.18"/><path d="M40 70 L44 54 L48 70Z" fill="#b57ad6"/><path d="M44 54 L48 70 L46 70Z" fill="#8a4fb0"/><path d="M48 70 L52 60 L55 70Z" fill="#c995ea"/><path d="M44 58 v6" stroke="#f3dcff" stroke-width="0.9" opacity="0.9"/>`,
 };
 
 // Cuánto se puede correr la decoración hacia los costados (px).
