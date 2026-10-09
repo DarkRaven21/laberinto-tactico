@@ -5,11 +5,13 @@
 // y el resultado con los stats actuales. Cada una se puede desactivar:
 // las desactivadas no aparecen en la mano del combate (ver
 // ability-prefs.js y renderHand en battle.js).
+// Los números y textos salen de ability-text.js.
 // ============================================================
 import { requireSession, getSession } from "./session.js";
 import { PLAYER_CONFIG } from "./player.js";
 import { ABILITIES } from "./abilities.js";
 import { getHiddenAbilities, setHiddenAbilities } from "./ability-prefs.js";
+import { abilityNumbers, effectLines, metaChips, usedStats } from "./ability-text.js";
 
 requireSession();
 
@@ -20,91 +22,7 @@ let stats = {};       // stats totales del personaje (con equipo y estilo de vid
 let hidden = new Set();
 let characterId = null;
 
-// ---------- Fórmulas (las mismas de battle.js / admin.js) ----------
 const val = st => Number(stats[st]) || 0;
-
-function avg(list) {
-    if (!list || list.length === 0) return 0;
-    return Math.floor(list.reduce((acc, st) => acc + val(st), 0) / list.length);
-}
-
-// Atributos que usa la habilidad para su efecto principal, sin repetir.
-function usedStats(ab) {
-    const lists = [ab.damageStats, ab.reductionStats, ab.healStats, ab.shieldStats, ab.buffStats, ab.dodgeStats];
-    const seen = new Set();
-    const out = [];
-    lists.forEach(list => (list || []).forEach(st => {
-        if (!seen.has(st)) { seen.add(st); out.push(st); }
-    }));
-    return out;
-}
-
-// Resultado con los stats actuales, más los efectos que agrega.
-function resultParts(ab) {
-    const parts = [];
-    // Invocación: el texto sale del desc de la habilidad (ahí está el
-    // nombre de la criatura, que esta página no carga).
-    if (ab.summon) parts.push((ab.desc || "Invoca una criatura").split(" · ")[0]);
-    if (ab.damageStats) {
-        const dmg = Math.max(1, Math.floor(avg(ab.damageStats) * (ab.damageMultiplier ?? 1)));
-        parts.push(ab.targetType === "trap" ? `Daño ${dmg} al pisarla` : `Daño ${dmg}`);
-        if (ab.critChance) {
-            const crit = Math.ceil(dmg * (ab.critMultiplier ?? 1.5));
-            parts.push(`${Math.round(ab.critChance * 100)}% de crítico (${crit})`);
-        }
-        if (ab.leapAttack) parts.push("Saltás a la casilla y dañás a los rivales pegados");
-        else if (ab.aoeRadius) parts.push(`Área ${ab.aoeRadius}`);
-        if (ab.opponentsOnly && !ab.leapAttack) parts.push("Solo a rivales");
-        if (ab.pullsToMelee) parts.push("Atrae al objetivo");
-        if (ab.debuffStats) parts.push("Maldice");
-        if (ab.debuffPercent) parts.push("Ciega");
-        if (ab.onHitApDrain) parts.push(`-${ab.onHitApDrain} PA al golpeado`);
-        if (ab.onHitMpDrain) parts.push(`-${ab.onHitMpDrain} PM al golpeado`);
-        if (ab.trapMoveLoss) parts.push(`-${ab.trapMoveLoss} PM`);
-        if (ab.onHitMoveGain) parts.push(`+${ab.onHitMoveGain} PM si golpea`);
-        if (ab.onHitLifesteal) parts.push("Te cura lo que pega");
-        if (ab.onHitSelfStatGain) parts.push(`Ganás ${ab.onHitSelfStatGain} igual al daño hecho, todo el combate`);
-    }
-    if (ab.reductionStats) {
-        const red = Math.max(ab.reductionMin || 0, Math.floor(avg(ab.reductionStats) * (ab.reductionMultiplier ?? 1)));
-        parts.push(`Reduce ${red} el daño recibido`);
-        if (ab.nextTurnGrant?.move) parts.push(`+${ab.nextTurnGrant.move} PM tu próximo turno`);
-    }
-    if (ab.healStats) {
-        parts.push(`Cura ${Math.floor(avg(ab.healStats) * (ab.healMultiplier ?? 1))}`);
-    }
-    if (ab.shieldStats) {
-        parts.push(`Escudo de ${Math.floor(avg(ab.shieldStats) * (ab.shieldMultiplier ?? 1))} a un aliado o a vos`);
-    }
-    if (ab.buffStats) {
-        if (ab.buffType === "AP") {
-            parts.push(`+${Math.max(1, Math.floor(avg(ab.buffStats) * (ab.buffMultiplier ?? 1)))} PA`);
-        } else {
-            parts.push(`+${avg(ab.buffStats)} de daño a vos y tus aliados`);
-        }
-    }
-    if (ab.dodgeStats) {
-        const sum = ab.dodgeStats.reduce((acc, st) => acc + val(st), 0);
-        const chance = Math.min(85, Math.floor(25 + 30.83 * Math.log(1 + sum / 60)));
-        parts.push(`${chance}% de esquivar`);
-    }
-    if (ab.selfStatBoost) {
-        for (const [st, pct] of Object.entries(ab.selfStatBoost)) parts.push(`${st} +${Math.round(pct * 100)}%`);
-    }
-    if (ab.apGrantAll) parts.push(`+${ab.apGrantAll} PA ya para vos y +${ab.apGrantAll} PA a tus aliados en su próximo turno`);
-    if (ab.alliesNextTurnGrant?.move) parts.push(`+${ab.alliesNextTurnGrant.move} PM a tus aliados`);
-    if (ab.resourceGrant?.move) parts.push(`+${ab.resourceGrant.move} PM`);
-    if (ab.resourceGrant?.ap) parts.push(`+${ab.resourceGrant.ap} PA`);
-    if (!parts.length && ab.targetType === "empty") parts.push(`Te mueve ${ab.range} casilla${ab.range > 1 ? "s" : ""}`);
-    return parts;
-}
-
-function metaLine(ab) {
-    const parts = [`${ab.apCost} PA`];
-    parts.push(ab.cooldown ? `CD ${ab.cooldown}` : "Sin CD");
-    parts.push(ab.range > 0 ? `Alcance ${ab.range}` : "Sobre vos");
-    return parts;
-}
 
 // ---------- Render ----------
 function activeCount() {
@@ -175,7 +93,7 @@ function render() {
         // Costo, cooldown y alcance
         const meta = document.createElement("div");
         meta.className = "hab-meta";
-        metaLine(ab).forEach(t => {
+        metaChips(ab).forEach(t => {
             const chip = document.createElement("span");
             chip.className = "hab-chip";
             chip.textContent = t;
@@ -184,7 +102,7 @@ function render() {
         card.appendChild(meta);
 
         // Resultado con tus stats
-        const parts = resultParts(ab);
+        const parts = effectLines(ab, abilityNumbers(ab, val));
         if (parts.length) {
             const result = document.createElement("div");
             result.className = "hab-result";

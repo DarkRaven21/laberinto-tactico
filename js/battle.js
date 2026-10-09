@@ -1,5 +1,6 @@
 import { ENEMY_TYPES } from "./enemies.js";
 import { ABILITIES } from "./abilities.js";
+import { abilityNumbers, shortLine, tooltipLine } from "./ability-text.js";
 import { PASSIVES } from "./passives.js";
 import { generateEncounter } from "./encounter.js";
 import { getProgress, finishCombat, advanceRoom, resetProgress } from "./progress.js";
@@ -2492,60 +2493,40 @@ function renderSide() {
     });
 }
 
-// Línea corta de la carta: lo justo para decidir (daño/efecto, alcance
-// si es mayor a 1, costo). El detalle completo va en el title del botón.
-function cardMetaShort(u, key) {
+// Números que muestran la carta y el tooltip: fórmulas de ability-text.js
+// con los stats efectivos del momento (pasivas, maldiciones, Foco
+// Arcano…) y el bonus de Comandar si está activo.
+function displayNumbers(u, key) {
+    const nums = abilityNumbers(ABILITIES[key], st => effectiveStat(u, st),
+        { extraDamage: u.commandActive ? u.commandBonus : 0 });
+    checkTextNumbers(u, key, nums);
+    return nums;
+}
+
+function summonOpts(ab) {
+    const cfg = ENEMY_TYPES[ab.summon];
+    return cfg ? { summonLabel: cfg.label, summonHp: cfg.hp } : {};
+}
+
+// Control: si lo que muestra el módulo no coincide con lo que calcula el
+// combate, avisa en consola (una vez por habilidad y por número).
+const textMismatchWarned = new Set();
+function checkTextNumbers(u, key, nums) {
     const ab = ABILITIES[key];
-    const parts = [];
-    const rangeText = ab.range > 1 ? `Alc. ${ab.range}` : null;
-    if (ab.summon) {
-        parts.push(`Invoca ${ENEMY_TYPES[ab.summon]?.label || ab.summon}`);
-    } else if (ab.damageStats) {
-        parts.push(`Daño ${computeAbilityDamage(u, key)}`);
-        if (rangeText) parts.push(rangeText);
-        if (ab.aoeRadius) parts.push(`Área ${ab.aoeRadius}`);
-        if (ab.critChance) parts.push(`${Math.round(ab.critChance * 100)}% crít.`);
-        if (ab.pullsToMelee) parts.push("Atrae");
-        if (ab.debuffStats) parts.push("Maldice");
-        if (ab.debuffPercent) parts.push("Ciega");
-        if (ab.onHitMpDrain) parts.push(`-${ab.onHitMpDrain} PM`);
-        if (ab.onHitApDrain) parts.push(`-${ab.onHitApDrain} PA`);
-        if (ab.trapMoveLoss) parts.push(`-${ab.trapMoveLoss} PM`);
-        if (ab.onHitSelfStatGain) parts.push(`+${ab.onHitSelfStatGain}`);
-    } else if (ab.reductionStats) {
-        parts.push(`Reduce ${computeAbilityReduction(u, key)}`);
-        if (ab.nextTurnGrant?.move) parts.push(`+${ab.nextTurnGrant.move} PM`);
-    } else if (ab.dodgeStats) {
-        parts.push(`Esquiva ${computeDodgeChance(u, key)}%`);
-    } else if (ab.buffType === "AP") {
-        parts.push(`+${computeAbilityBuffAmount(u, key)} PA`);
-        if (rangeText) parts.push(rangeText);
-    } else if (ab.buffStats) {
-        parts.push(`+${computeAbilityBuff(u, key)} daño`);
-    } else if (ab.healStats) {
-        parts.push(`Cura ${computeAbilityHeal(u, key)}`);
-        if (rangeText) parts.push(rangeText);
-    } else if (ab.selfStatBoost) {
-        for (const [stat, pct] of Object.entries(ab.selfStatBoost)) {
-            parts.push(`${stat} +${Math.round(pct * 100)}%`);
-        }
-    } else if (ab.shieldStats) {
-        parts.push(`Escudo ${computeAbilityShield(u, key)}`);
-        if (rangeText) parts.push(rangeText);
-    } else if (ab.apGrantAll) {
-        parts.push(`+${ab.apGrantAll} PA a todos`);
-    } else if (ab.alliesNextTurnGrant) {
-        if (ab.alliesNextTurnGrant.move) parts.push(`+${ab.alliesNextTurnGrant.move} PM aliados`);
-    } else if (ab.resourceGrant) {
-        if (ab.resourceGrant.move) parts.push(`+${ab.resourceGrant.move} MOV`);
-        if (ab.resourceGrant.ap) parts.push(`+${ab.resourceGrant.ap} PA`);
-    } else if (ab.targetType === "empty") {
-        parts.push(`Mueve ${ab.range}`);
-    } else if (rangeText) {
-        parts.push(rangeText);
+    const pairs = [];
+    if (ab.damageStats) pairs.push(["daño", nums.damage, computeAbilityDamage(u, key)]);
+    if (ab.reductionStats) pairs.push(["reducción", nums.reduction, computeAbilityReduction(u, key)]);
+    if (ab.healStats) pairs.push(["cura", nums.heal, computeAbilityHeal(u, key)]);
+    if (ab.shieldStats) pairs.push(["escudo", nums.shield, computeAbilityShield(u, key)]);
+    if (ab.buffStats) pairs.push(["buff", nums.buff, ab.buffType === "AP" ? computeAbilityBuffAmount(u, key) : computeAbilityBuff(u, key)]);
+    if (ab.dodgeStats) pairs.push(["esquiva", nums.dodge, computeDodgeChance(u, key)]);
+    for (const [what, shown, real] of pairs) {
+        if (shown === real) continue;
+        const tag = `${key}:${what}`;
+        if (textMismatchWarned.has(tag)) continue;
+        textMismatchWarned.add(tag);
+        console.warn(`[ability-text] ${ab.name}: la carta muestra ${what} ${shown} pero el combate calcula ${real}. Revisar ability-text.js.`);
     }
-    parts.push(`${ab.apCost} PA`);
-    return parts.join(" · ");
 }
 
 // Habilidades que el jugador desactivó en la página Habilidades: no se
@@ -2565,54 +2546,13 @@ function renderHand() {
         const noRoom = !!ab.summon && summonCellFor(u) === -1;
         btn.disabled = (state.turn !== "player" || state.gameOver || state.busy || onCooldown || noAp || noRoom);
 
-
-        // Si la habilidad hace daño, mostramos el número real calculado
-        // con los stats actuales del jugador — no un texto fijo. Se
-        // recalcula en cada render, así que si en algún momento los stats
-        // cambian a mitad de partida, la carta lo refleja sola. Lo mismo
-        // para Defender, pero con la reducción en vez del daño.
-        let desc = ab.desc;
-        if (ab.summon) {
-            const cfg = ENEMY_TYPES[ab.summon];
-            desc = `Invoca ${cfg?.label || ab.summon} (${cfg?.hp ?? "?"} de vida) en una casilla libre pegada a vos. Pelea solo de tu lado y juega en esta misma ronda · CD ${ab.cooldown}`;
-        } else if (ab.damageStats) {
-            const dmgPreview = computeAbilityDamage(u, key);
-            const aoeText = ab.aoeRadius ? ` · Área radio ${ab.aoeRadius}` : "";
-            const pullText = ab.pullsToMelee ? " · Atrae al objetivo" : "";
-            const curseText = (ab.debuffStats ? " · Maldice: baja sus atributos en el daño hecho" : "")
-                + (ab.debuffPercent ? ` · -${Math.round(ab.debuffPercent.percent * 100)}% ${ab.debuffPercent.stats.join(" y ")} en su próximo turno` : "");
-            const mpText = (ab.onHitMpDrain ? ` · -${ab.onHitMpDrain} PM al golpeado` : "")
-                + (ab.onHitApDrain ? ` · -${ab.onHitApDrain} PA al golpeado` : "");
-            const critPct = ab.critChance ? Math.round(ab.critChance * 100) : 0;
-            const critText = (critPct ? ` · ${critPct}% crítico (x${ab.critMultiplier || 1.5})` : "")
-                + (ab.onHitSelfStatGain ? ` · Ganás ${ab.onHitSelfStatGain} igual al daño hecho, todo el combate` : "");
-            desc = `Alcance ${ab.range} · Daño ${dmgPreview}${critText}${aoeText}${pullText}${curseText}${mpText}`;
-        } else if (ab.reductionStats) {
-            const reducPreview = computeAbilityReduction(u, key);
-            const moveText = ab.nextTurnGrant?.move ? ` · +${ab.nextTurnGrant.move} PM tu próximo turno` : "";
-            desc = `Reduce el daño recibido en ${reducPreview} hasta tu próximo turno${moveText} · CD ${ab.cooldown}`;
-        } else if (ab.dodgeStats) {
-            const dodgePreview = computeDodgeChance(u, key);
-            desc = `${dodgePreview}% de esquivar todo el daño recibido hasta tu próximo turno`;
-        } else if (ab.buffType === "AP") {
-            desc = `Alcance ${ab.range} · Da +${computeAbilityBuffAmount(u, key)} PA (a ti: al instante; a un aliado: en su próximo turno)`;
-        } else if (ab.buffStats) {
-            const buffPreview = computeAbilityBuff(u, key);
-            desc = `Aumenta tu daño y el de tus aliados en ${buffPreview} hasta tu próximo turno · CD ${ab.cooldown}`;
-        } else if (ab.apGrantAll) {
-            desc = `+${ab.apGrantAll} PA ya para vos y +${ab.apGrantAll} PA a tus aliados en su próximo turno · CD ${ab.cooldown}`;
-        } else if (ab.shieldStats) {
-            desc = `Alcance ${ab.range} · Escudo de ${computeAbilityShield(u, key)} a un aliado o a vos (se gasta antes que la vida; no se suma) · CD ${ab.cooldown}`;
-        } else if (ab.healStats) {
-            const healPreview = computeAbilityHeal(u, key);
-            desc = `Alcance ${ab.range} · Cura ${healPreview}`;
-        }
-
-        // Carta compacta: nombre + una línea corta (cardMetaShort). El texto
-        // largo queda como tooltip (title) para quien quiera el detalle.
-        btn.title = `${ab.name}: ${desc} · Costo ${ab.apCost} PA`;
+        // Textos de ability-text.js: línea corta en la carta y detalle en
+        // el tooltip, con los números del momento.
+        const nums = displayNumbers(u, key);
+        const opts = ab.summon ? summonOpts(ab) : {};
+        btn.title = `${ab.name}: ${tooltipLine(ab, nums, opts)} · Costo ${ab.apCost} PA`;
         const cdBadge = onCooldown ? `<span class="card-cd">CD ${u.cooldowns[key]}</span>` : "";
-        btn.innerHTML = `<span class="card-name">${ab.name}</span><span class="card-meta">${cardMetaShort(u, key)}</span>${cdBadge}`;
+        btn.innerHTML = `<span class="card-name">${ab.name}</span><span class="card-meta">${shortLine(ab, nums, opts)}</span>${cdBadge}`;
         btn.addEventListener("click", () => selectCard(key));
         handEl.appendChild(btn);
     });

@@ -1,6 +1,7 @@
 // ============================================================
 // abilities.js — definición de todas las habilidades.
-// Lo importan battle.js (combate) y admin.js (tabla de stats).
+// Lo importan battle.js (combate), habilidades.js, admin.js y
+// ability-text.js (textos que se muestran).
 // Para sumar o cambiar una habilidad, se toca solo este archivo.
 // ============================================================
 
@@ -547,29 +548,35 @@ export const ABILITIES = {
     },
     // Invocaciones. `summon` es la key de creature_types de la criatura que
     // aparece (en una casilla libre pegada a quien la usa, de su bando).
-    // Para otra invocación: copiar esta entrada y cambiar summon/name.
+    // `summonLabel`: nombre que muestra Habilidades (el combate y el
+    // bestiario usan el label real de creature_types).
+    // Para otra invocación: copiar esta entrada y cambiar summon/summonLabel/name.
     // Los invocados no dan oro, XP ni alma. Ver spawnSummon en battle.js.
     summonYoungWolf: {
         name: "Invocar Lobo Joven", range: 0, apCost: 3, cooldown: 8, needsTarget: false,
         summon: "youngWolf",
+        summonLabel: "Young Wolf",
         desc: "Invoca un Young Wolf a tu lado · CD 8"
     },
     // Hobgoblin Commander.
     summonGoblinWarrior: {
         name: "Invocar Guerrero Goblin", range: 0, apCost: 3, cooldown: 8, needsTarget: false,
         summon: "goblinWarrior",
+        summonLabel: "Goblin Warrior",
         desc: "Invoca un Goblin Warrior a tu lado · CD 8"
     },
     // Orc Ranger.
     summonOldWolf: {
         name: "Invocar Lobo Viejo", range: 0, apCost: 3, cooldown: 8, needsTarget: false,
         summon: "oldWolf",
+        summonLabel: "Old Wolf",
         desc: "Invoca un Old Wolf a tu lado · CD 8"
     },
     // Orc Commander.
     summonVulture: {
         name: "Invocar Buitre", range: 0, apCost: 3, cooldown: 8, needsTarget: false,
         summon: "vulture",
+        summonLabel: "Vulture",
         desc: "Invoca un Vulture a tu lado · CD 8"
     },
 
@@ -726,6 +733,7 @@ export const ABILITIES = {
     summonBloodGnome: {
         name: "Invocar Gnomo de Sangre", range: 0, apCost: 3, cooldown: 8, needsTarget: false,
         summon: "bloodGnome",
+        summonLabel: "Blood Gnome",
         desc: "Invoca un Blood Gnome a tu lado · CD 8"
     },
 
@@ -745,16 +753,19 @@ export const ABILITIES = {
     summonGoblinShaman: {
         name: "Invocar Chamán Goblin", range: 0, apCost: 3, cooldown: 4, needsTarget: false,
         summon: "goblinShaman",
+        summonLabel: "Goblin Shaman",
         desc: "Invoca un Goblin Shaman a tu lado · CD 4"
     },
     summonGoblinAssassin: {
         name: "Invocar Asesino Goblin", range: 0, apCost: 3, cooldown: 4, needsTarget: false,
         summon: "goblinAssassin",
+        summonLabel: "Goblin Assassin",
         desc: "Invoca un Goblin Assassin a tu lado · CD 4"
     },
     summonGoblinTrapper: {
         name: "Invocar Trampero Goblin", range: 0, apCost: 3, cooldown: 4, needsTarget: false,
         summon: "goblinTrapper",
+        summonLabel: "Goblin Trapper",
         desc: "Invoca un Goblin Trapper a tu lado · CD 4"
     },
 };

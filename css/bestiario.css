@@ -1,0 +1,152 @@
+/* Bestiario: reusa armeria.css (cartas) y habilidades.css (chips y
+   resultados). Esto agrega las secciones, el retrato y la silueta. */
+
+/* ---------- Secciones ---------- */
+.bst-level {
+    margin-top: 20px;
+}
+
+.bst-level-title {
+    margin: 0 0 4px;
+    padding-bottom: 6px;
+    font-size: 20px;
+    color: var(--amber);
+    border-bottom: 1px solid #2c313b;
+}
+
+.bst-biome {
+    margin-top: 14px;
+}
+
+.bst-biome-title {
+    margin: 0 0 6px;
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+}
+
+.bst-biome-sub {
+    text-transform: none;
+    letter-spacing: 0;
+    font-weight: 400;
+}
+
+.bst-family {
+    margin-top: 8px;
+}
+
+.bst-family-title {
+    margin: 0 0 8px;
+    font-size: 15px;
+    color: var(--teal);
+}
+
+/* ---------- Carta ---------- */
+.bst-card {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.bst-head {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.bst-portrait {
+    width: 64px;
+    height: 64px;
+    flex-shrink: 0;
+    border-radius: 6px;
+    border: 1px solid #2c313b;
+    background: #15181e;
+    object-fit: cover;
+}
+
+.bst-portrait--empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--mono);
+    font-size: 22px;
+    color: var(--text-dim);
+}
+
+/* Silueta: la imagen real, casi negra. Si se ve demasiado o muy poco,
+   tocar el brightness. */
+.bst-portrait--unknown {
+    filter: grayscale(1) brightness(0.18) contrast(1.4);
+}
+
+.bst-info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+}
+
+.bst-card--unknown .armeria-item-name {
+    color: var(--text-dim);
+    letter-spacing: 0.2em;
+}
+
+.bst-hidden-note {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--amber);
+}
+
+/* ---------- Habilidades y pasivas ---------- */
+.bst-section {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.bst-section-title {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+}
+
+.bst-ability,
+.bst-passive {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding-top: 6px;
+    border-top: 1px solid #2c313b;
+}
+
+.bst-ability-name {
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.bst-passive-lines {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--teal);
+}
+
+@media (max-width: 600px) {
+    .bst-level-title {
+        font-size: 18px;
+    }
+    .bst-portrait {
+        width: 52px;
+        height: 52px;
+    }
+    .bst-passive-lines {
+        font-size: 11px;
+    }
+}

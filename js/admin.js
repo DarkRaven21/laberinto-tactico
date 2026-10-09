@@ -2,10 +2,11 @@
 // admin.js — tabla de habilidades × stats (admin.html).
 // Filas: habilidades. Columnas: stats. Fila de arriba: valores que se
 // cargan a mano. Columna "Daño / efecto": lo que haría cada habilidad
-// con esos valores, con las mismas fórmulas que battle.js.
-// Solo lee abilities.js: no toca la base ni el combate.
+// con esos valores (números de ability-text.js, mismas fórmulas que
+// battle.js). Solo lee abilities.js: no toca la base ni el combate.
 // ============================================================
 import { ABILITIES } from "./abilities.js";
+import { abilityNumbers, compactLine, usedStats } from "./ability-text.js";
 
 const STORAGE_KEY = "admin:statValues";
 const EQUIP_STATS = ["Arma Melee", "Arma Distancia", "Foco Magico", "Armadura"];
@@ -17,6 +18,7 @@ const KINDS = [
     { field: "damageStats", kind: "damage", mark: "●" },
     { field: "reductionStats", kind: "reduction", mark: "◆" },
     { field: "healStats", kind: "heal", mark: "✚" },
+    { field: "shieldStats", kind: "shield", mark: "⬢" },
     { field: "buffStats", kind: "buff", mark: "▲" },
     { field: "dodgeStats", kind: "dodge", mark: "%" },
     { field: "debuffStats", kind: "debuff", mark: "↓" }
@@ -59,14 +61,7 @@ function saveValues() {
     }
 }
 
-// ---------- Fórmulas (copiadas de battle.js) ----------
 const val = st => Number(values[st]) || 0;
-
-// floor(suma / cantidad), igual que averageStats.
-function avg(list) {
-    if (!list || list.length === 0) return 0;
-    return Math.floor(list.reduce((acc, st) => acc + val(st), 0) / list.length);
-}
 
 function hasAnyValue(list) {
     return (list || []).some(st => values[st] !== undefined && values[st] !== "");
@@ -75,39 +70,8 @@ function hasAnyValue(list) {
 // Texto del resultado de una habilidad, o null si no hay valores cargados
 // en ninguno de los stats que usa.
 function resultFor(ab) {
-    const used = [ab.damageStats, ab.reductionStats, ab.healStats, ab.buffStats, ab.dodgeStats];
-    if (!used.some(hasAnyValue)) return null;
-
-    const parts = [];
-    if (ab.damageStats) {
-        const mult = ab.damageMultiplier ?? 1;
-        const dmg = Math.max(1, Math.floor(avg(ab.damageStats) * mult));
-        let text = `Daño ${dmg}`;
-        if (ab.critChance) text += ` (crít. ${Math.ceil(dmg * (ab.critMultiplier ?? 1.5))})`;
-        parts.push(text);
-    }
-    if (ab.reductionStats) {
-        const mult = ab.reductionMultiplier ?? 1;
-        parts.push(`Reduce ${Math.max(ab.reductionMin || 0, Math.floor(avg(ab.reductionStats) * mult))}`);
-    }
-    if (ab.healStats) {
-        const mult = ab.healMultiplier ?? 1;
-        parts.push(`Cura ${Math.floor(avg(ab.healStats) * mult)}`);
-    }
-    if (ab.buffStats) {
-        if (ab.buffType === "AP") {
-            const mult = ab.buffMultiplier ?? 1;
-            parts.push(`+${Math.max(1, Math.floor(avg(ab.buffStats) * mult))} PA`);
-        } else {
-            parts.push(`+${avg(ab.buffStats)} daño`);
-        }
-    }
-    if (ab.dodgeStats) {
-        const sum = ab.dodgeStats.reduce((acc, st) => acc + val(st), 0);
-        const chance = Math.min(85, Math.floor(25 + 30.83 * Math.log(1 + sum / 60)));
-        parts.push(`Esquiva ${chance}%`);
-    }
-    return parts.join(" · ");
+    if (!hasAnyValue(usedStats(ab))) return null;
+    return compactLine(ab, abilityNumbers(ab, val)) || null;
 }
 
 // Multiplicadores para mostrar debajo del nombre.
@@ -116,6 +80,7 @@ function multText(ab) {
     if (ab.damageStats) m.push(`×${ab.damageMultiplier ?? 1}`);
     if (ab.reductionStats && ab.reductionMultiplier != null) m.push(`red. ×${ab.reductionMultiplier}`);
     if (ab.healStats && ab.healMultiplier != null) m.push(`cura ×${ab.healMultiplier}`);
+    if (ab.shieldStats && ab.shieldMultiplier != null) m.push(`escudo ×${ab.shieldMultiplier}`);
     if (ab.buffStats && ab.buffMultiplier != null) m.push(`buff ×${ab.buffMultiplier}`);
     return m.join(" · ");
 }

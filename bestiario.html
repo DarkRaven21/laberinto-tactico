@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Bestiario — Combate Táctico</title>
+  <link rel="stylesheet" href="css/battle.css?ver=2026.10.05a">
+  <link rel="stylesheet" href="css/laberinto.css?ver=2026.10.05a">
+  <link rel="stylesheet" href="css/armeria.css?ver=2026.10.05b">
+  <link rel="stylesheet" href="css/habilidades.css?ver=2026.10.07a">
+  <link rel="stylesheet" href="css/bestiario.css?ver=2026.10.09a">
+  <script type="module" src="js/bestiario.js?ver=2026.10.09c"></script>
+</head>
+<body class="laberinto-body">
+  <h1>Bestiario</h1>
+
+  <!-- Reusa las cartas de la armería (armeria.css) y los chips y
+       resultados de Habilidades (habilidades.css); bestiario.css agrega
+       las secciones, el retrato y la silueta. -->
+  <div class="armeria-wrap">
+    <div class="armeria-current" id="bestiarioSummary">Cargando…</div>
+    <div id="bestiarioList"></div>
+
+    <button class="rest-btn" id="backBtn">Volver a la ciudad</button>
+  </div>
+</body>
+</html>
