@@ -36,6 +36,7 @@ const LEVEL_CONFIG = {
   2: { xpMin: 4,  xpMax: 14, minCreatures: 1, maxCreatures: 4 },
   3: { xpMin: 6,  xpMax: 21, minCreatures: 1, maxCreatures: 5 },
   4: { xpMin: 14, xpMax: 35, minCreatures: 2, maxCreatures: 5 },
+  5: { xpMin: 24, xpMax: 45, minCreatures: 2, maxCreatures: 5 },
 };
 
 function levelConfig(level) {
