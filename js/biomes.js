@@ -127,7 +127,20 @@ export const BIOMES = {
             { art: "edelweiss", chance: 0.04 },
             { art: "rockCrack", chance: 0.05 },
             { art: "alpineGrass", chance: 0.07 },
-            { art: "pebbles", chance: 0.16 }
+            { art: "mountainPebbles", chance: 0.16 }
+        ]
+    },
+    // Infierno (familia infernal). Basalto oscuro con tinte rojizo; los
+    // ríos de lava pintan la casilla entera, como el agua de la playa.
+    hell: {
+        name: "Infierno",
+        obstacles: ["lavaRiver", "lavaRiver", "lavaRiver", "volcanicRock", "volcanicRock", "obsidianSpire", "obsidianSpire", "charredTree", "charredTree", "hellBrazier"],
+        groundDecor: [
+            { art: "sulfur", chance: 0.02 },
+            { art: "skull", chance: 0.03 },
+            { art: "lavaCrack", chance: 0.06 },
+            { art: "hellEmbers", chance: 0.07 },
+            { art: "ash", chance: 0.14 }
         ]
     },
 };
@@ -146,6 +159,8 @@ export const FAMILY_BIOME = {
     ice: "ice",
     mind: "mountain",
     grok: "swamp",
+    infernal: "hell",
+    undead: "cemetery",
 };
 export const DEFAULT_BIOME = "forest";
 
@@ -217,6 +232,12 @@ const OBSTACLE_ART = {
     alpinePine: svg(`<ellipse cx="48" cy="80" rx="22" ry="5" fill="rgba(0,0,0,0.4)"/><rect x="44" y="66" width="8" height="14" fill="#4f3b2c"/><path d="M48 6 L64 32 L32 32Z" fill="#2c4a3a"/><path d="M48 20 L70 50 L26 50Z" fill="#284536"/><path d="M48 36 L74 70 L22 70Z" fill="#233e30"/><path d="M48 6 L64 32 L56 32Z M48 20 L70 50 L60 50Z M48 36 L74 70 L62 70Z" fill="#1a3226"/>`),
     mindCrystal: svg(`<circle cx="46" cy="48" r="32" fill="#c27ae0" opacity="0.14"/><ellipse cx="48" cy="76" rx="30" ry="7" fill="rgba(0,0,0,0.4)"/><path d="M18 76 Q20 62 34 60 L62 60 Q76 62 78 76Z" fill="#6c6760"/><path d="M34 66 L40 26 L48 66Z" fill="#b57ad6"/><path d="M40 26 L48 66 L43 66Z" fill="#8a4fb0"/><path d="M44 66 L54 14 L64 66Z" fill="#c995ea"/><path d="M54 14 L64 66 L57 66Z" fill="#9a5cc2"/><path d="M60 66 L68 42 L74 66Z" fill="#b57ad6"/><path d="M68 42 L74 66 L70 66Z" fill="#8a4fb0"/><path d="M52 24 L50 50 M39 36 l-1 14" stroke="#f3dcff" stroke-width="1.6" stroke-linecap="round" opacity="0.9"/>`),
     chasm: svg(`<rect x="0" y="0" width="92" height="92" rx="3" fill="#2a2724"/><path d="M0 0 H92 V14 Q70 22 46 16 Q22 10 0 18Z" fill="#5c574f"/><path d="M0 92 H92 V80 Q66 72 44 78 Q20 84 0 76Z" fill="#504b44"/><ellipse cx="46" cy="48" rx="40" ry="24" fill="#141210"/><ellipse cx="46" cy="50" rx="24" ry="12" fill="#0a0908"/><path d="M8 20 L14 30 M80 18 L76 30 M16 78 L22 70" stroke="#6f6a62" stroke-width="2" stroke-linecap="round"/>`),
+    // Infierno
+    lavaRiver: svg(`<rect x="0" y="0" width="92" height="92" rx="3" fill="#b8340f"/><ellipse cx="40" cy="36" rx="40" ry="28" fill="#e8601a" opacity="0.85"/><ellipse cx="54" cy="58" rx="22" ry="12" fill="#ffb347" opacity="0.55"/><path d="M6 20 q10 6 20 2 q8 -4 14 4 l-6 8 q-12 -4 -28 0z" fill="#3a1a12" opacity="0.85"/><path d="M58 70 q10 -6 20 -2 q8 4 12 -2 v14 q-14 4 -30 -2z" fill="#3a1a12" opacity="0.85"/><path d="M30 64 q6 -3 12 0" stroke="#3a1a12" stroke-width="3" fill="none" stroke-linecap="round" opacity="0.7"/><circle cx="64" cy="30" r="3" fill="#ffd66e" opacity="0.9"/><circle cx="22" cy="54" r="2" fill="#ffd66e" opacity="0.8"/>`),
+    volcanicRock: svg(`<ellipse cx="50" cy="70" rx="34" ry="10" fill="rgba(0,0,0,0.5)"/><path d="M14 66 Q12 44 28 32 Q44 22 62 28 Q80 36 78 58 Q76 70 56 72 L30 72 Q16 72 14 66Z" fill="#2e2426"/><path d="M62 28 Q80 36 78 58 Q76 70 56 72 Q68 54 62 28Z" fill="#1e1718"/><path d="M26 44 l10 6 l8 -5 l10 9 l9 -4" stroke="#f0702a" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M26 44 l10 6 l8 -5 l10 9 l9 -4" stroke="#ffd66e" stroke-width="0.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M40 60 l6 4" stroke="#e8601a" stroke-width="1.6" stroke-linecap="round"/><path d="M28 36 Q40 28 52 30" stroke="#4a3b3d" stroke-width="3" fill="none" stroke-linecap="round"/>`),
+    obsidianSpire: svg(`<circle cx="46" cy="46" r="30" fill="#7a3fb0" opacity="0.10"/><ellipse cx="48" cy="76" rx="28" ry="6" fill="rgba(0,0,0,0.5)"/><path d="M28 76 L36 34 L46 76Z" fill="#1c1622"/><path d="M36 34 L46 76 L40 76Z" fill="#0e0b12"/><path d="M42 76 L52 12 L62 76Z" fill="#241c2c"/><path d="M52 12 L62 76 L55 76Z" fill="#120e17"/><path d="M58 76 L66 44 L74 76Z" fill="#1c1622"/><path d="M66 44 L74 76 L69 76Z" fill="#0e0b12"/><path d="M50 22 L48 54 M35 44 l-1 12" stroke="#a77fd6" stroke-width="1.4" stroke-linecap="round" opacity="0.8"/><path d="M26 76 q22 6 50 0" stroke="#e8601a" stroke-width="1.5" fill="none" opacity="0.5"/>`),
+    charredTree: svg(`<ellipse cx="48" cy="76" rx="18" ry="6" fill="rgba(0,0,0,0.5)"/><path d="M46 76V44M46 56l-14-12M46 50l12-14M58 36l6-8M32 44l-6-6M46 44l-4-16M46 62l10-6" stroke="#1a1213" stroke-width="5" stroke-linecap="round" fill="none"/><path d="M46 76V44M46 56l-14-12M46 50l12-14" stroke="#3a2a28" stroke-width="1.6" stroke-linecap="round" fill="none"/><circle cx="64" cy="28" r="2.2" fill="#ff8a3d"/><circle cx="26" cy="38" r="2" fill="#ffb347"/><circle cx="42" cy="28" r="1.8" fill="#ff8a3d"/><circle cx="56" cy="56" r="1.6" fill="#ffb347"/><circle cx="64" cy="28" r="5" fill="#ff8a3d" opacity="0.25"/><circle cx="26" cy="38" r="4.5" fill="#ffb347" opacity="0.22"/>`),
+    hellBrazier: svg(`<circle cx="46" cy="34" r="26" fill="#ff8a3d" opacity="0.14"/><ellipse cx="46" cy="78" rx="20" ry="5" fill="rgba(0,0,0,0.5)"/><rect x="40" y="46" width="12" height="32" fill="#2e2426"/><rect x="36" y="74" width="20" height="5" rx="1" fill="#241c1d"/><path d="M28 40 h36 l-6 10 h-24z" fill="#3b2f30"/><path d="M28 40 h36" stroke="#5a4a4b" stroke-width="2"/><path d="M34 50 l-2 -4 M58 50 l2 -4" stroke="#5a4a4b" stroke-width="2" stroke-linecap="round"/><path d="M46 40 q-12 -10 -3 -26 q2 9 6 7 q4 -9 2 -16 q11 13 3 35z" fill="#f08a2c"/><path d="M46 40 q-6 -6 -1 -15 q2 5 4 4 q3 -5 1 -9 q6 9 -4 20z" fill="#ffd66e"/><circle cx="40" cy="58" r="2" fill="#c2410c"/><circle cx="52" cy="62" r="2" fill="#c2410c"/>`),
 };
 
 // Decoración de suelo: dibujada centrada en x=46 y corrida al azar
@@ -274,12 +295,17 @@ const DECOR_ART = {
     pawPrints: `<g fill="#9fb4c3"><ellipse cx="36" cy="66" rx="4.2" ry="5"/><circle cx="32.5" cy="59.5" r="1.5"/><circle cx="36" cy="58.5" r="1.5"/><circle cx="39.5" cy="59.5" r="1.5"/><ellipse cx="54" cy="56" rx="4.2" ry="5"/><circle cx="50.5" cy="49.5" r="1.5"/><circle cx="54" cy="48.5" r="1.5"/><circle cx="57.5" cy="49.5" r="1.5"/></g>`,
     frozenPuddle: `<ellipse cx="46" cy="62" rx="17" ry="6.5" fill="#a9d6e8" opacity="0.75"/><path d="M36 62 l6 -2 l5 3 l7 -3" stroke="#ffffff" stroke-width="1" fill="none" opacity="0.8"/><ellipse cx="40" cy="60" rx="5" ry="1.3" fill="#ffffff" opacity="0.7"/>`,
     sparkle: `<path d="M38 56 v8 M34 60 h8 M54 64 v6 M51 67 h6 M50 50 v4 M48 52 h4" stroke="#ffffff" stroke-width="1.4" stroke-linecap="round"/><circle cx="38" cy="60" r="3" fill="#ffffff" opacity="0.35"/>`,
-    // Montaña
-    pebbles: `<ellipse cx="38" cy="62" rx="4" ry="3" fill="#5c574f"/><ellipse cx="50" cy="66" rx="3" ry="2.2" fill="#69645b"/><ellipse cx="56" cy="58" rx="2.5" ry="2" fill="#545049"/><ellipse cx="44" cy="70" rx="2" ry="1.6" fill="#625d55"/>`,
+    // Montaña (antes se llamaba "pebbles" y pisaba al de la playa)
+    mountainPebbles: `<ellipse cx="38" cy="62" rx="4" ry="3" fill="#5c574f"/><ellipse cx="50" cy="66" rx="3" ry="2.2" fill="#69645b"/><ellipse cx="56" cy="58" rx="2.5" ry="2" fill="#545049"/><ellipse cx="44" cy="70" rx="2" ry="1.6" fill="#625d55"/>`,
     alpineGrass: `<path d="M38 70 Q40 58 42 70 M44 70 Q46 54 48 70 M50 70 Q53 60 55 70" stroke="#6f8a52" stroke-width="2" fill="none" stroke-linecap="round"/>`,
     edelweiss: `<g fill="#f2f2ea"><circle cx="40" cy="60" r="2.4"/><circle cx="44" cy="60" r="2.4"/><circle cx="42" cy="56.6" r="2.4"/><circle cx="42" cy="63.4" r="2.4"/></g><circle cx="42" cy="60" r="1.5" fill="#d9c766"/><g fill="#eeeee4"><circle cx="54" cy="66" r="2"/><circle cx="57.4" cy="66" r="2"/><circle cx="55.7" cy="63.2" r="2"/></g><circle cx="55.7" cy="65.2" r="1.2" fill="#d9c766"/><path d="M42 66 v6 M56 69 v4" stroke="#6f8a52" stroke-width="1.4"/>`,
     rockCrack: `<path d="M30 56 l8 4 l4 -3 l7 6 l6 -2 l8 5" stroke="#4a4640" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M45 57 l2 -6" stroke="#4a4640" stroke-width="1.3" stroke-linecap="round"/>`,
     crystalShard: `<circle cx="46" cy="62" r="11" fill="#c27ae0" opacity="0.18"/><path d="M40 70 L44 54 L48 70Z" fill="#b57ad6"/><path d="M44 54 L48 70 L46 70Z" fill="#8a4fb0"/><path d="M48 70 L52 60 L55 70Z" fill="#c995ea"/><path d="M44 58 v6" stroke="#f3dcff" stroke-width="0.9" opacity="0.9"/>`,
+    // Infierno (la calavera reusa "skull" del cementerio)
+    ash: `<ellipse cx="42" cy="62" rx="18" ry="6" fill="#5a5052" opacity="0.45"/><ellipse cx="54" cy="66" rx="10" ry="3.5" fill="#6e6466" opacity="0.4"/><circle cx="34" cy="58" r="1.2" fill="#8a8082" opacity="0.6"/>`,
+    hellEmbers: `<circle cx="36" cy="60" r="5" fill="#ff8a3d" opacity="0.2"/><circle cx="36" cy="60" r="1.8" fill="#ffb347"/><circle cx="50" cy="66" r="4" fill="#ff8a3d" opacity="0.18"/><circle cx="50" cy="66" r="1.5" fill="#ff8a3d"/><circle cx="56" cy="56" r="1.2" fill="#ffd66e"/><circle cx="44" cy="70" r="1" fill="#ffb347"/>`,
+    lavaCrack: `<path d="M26 58 l9 4 l5 -3 l8 7 l7 -3 l10 5" stroke="#c2410c" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.45"/><path d="M26 58 l9 4 l5 -3 l8 7 l7 -3 l10 5" stroke="#ff8a3d" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M40 59 l2 -6" stroke="#ff8a3d" stroke-width="1.2" stroke-linecap="round"/>`,
+    sulfur: `<path d="M30 62 q4 -8 16 -6 q12 -2 16 6 q-4 8 -16 6 q-12 2 -16 -6z" fill="#b8b03a" opacity="0.55"/><circle cx="40" cy="60" r="2.4" fill="#e3dc5a"/><circle cx="50" cy="63" r="2" fill="#d4cc46"/><circle cx="46" cy="57" r="1.4" fill="#f0ea7a"/>`,
 };
 
 // Cuánto se puede correr la decoración hacia los costados (px).

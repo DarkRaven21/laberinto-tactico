@@ -55,7 +55,9 @@ export function abilityNumbers(ab, getStat, opts = {}) {
     }
     if (ab.buffStats) {
         const avg = avgOf(ab.buffStats, getStat);
-        n.buff = ab.buffType === "AP" ? Math.max(1, Math.floor(avg * (ab.buffMultiplier ?? 1))) : avg;
+        // Con buffType (Potenciar, Motivar): floor(promedio × mult), mínimo 1.
+        // Sin buffType (Comandar): el promedio tal cual.
+        n.buff = ab.buffType ? Math.max(1, Math.floor(avg * (ab.buffMultiplier ?? 1))) : avg;
     }
     if (ab.dodgeStats) {
         const sum = ab.dodgeStats.reduce((acc, st) => acc + getStat(st), 0);
@@ -75,7 +77,7 @@ export function metaChips(ab) {
     return [
         `${ab.apCost} PA`,
         ab.cooldown ? `CD ${ab.cooldown}` : "Sin CD",
-        ab.range > 0 ? `Alcance ${ab.range}` : (ab.summon ? "A tu lado" : "Sobre vos")
+        ab.range > 0 ? `Alcance ${ab.range}` : (ab.summon ? "A tu lado" : ab.shieldsAllies ? "Vos y tus aliados" : "Sobre vos")
     ];
 }
 
@@ -102,11 +104,16 @@ export function effectLines(ab, n, opts = {}) {
         if (ab.straightLineOnly) L.push("Solo en línea recta, sin nadie en el medio");
         if (ab.closesToMelee) L.push("Te pone cuerpo a cuerpo con el objetivo");
         if (ab.pullsToMelee) L.push("Atrae al objetivo hasta tenerlo cuerpo a cuerpo");
-        if (ab.debuffStats) L.push(`Maldice: baja ${ab.debuffStats.join(", ")} en el daño hecho, todo el combate`);
+        if (ab.debuffStats) {
+            const part = ab.debuffRatio == null || ab.debuffRatio === 1 ? "el daño hecho"
+                : ab.debuffRatio === 0.5 ? "la mitad del daño hecho" : `el ${pct(ab.debuffRatio)}% del daño hecho`;
+            L.push(`Maldice: baja ${ab.debuffStats.join(", ")} en ${part}, todo el combate`);
+        }
         if (ab.debuffPercent) L.push(`-${pct(ab.debuffPercent.percent)}% ${ab.debuffPercent.stats.join(" y ")} en su próximo turno`);
         if (ab.onHitApDrain) L.push(`-${ab.onHitApDrain} PA al golpeado en su próximo turno`);
         if (ab.onHitMpDrain) L.push(`-${ab.onHitMpDrain} PM al golpeado en su próximo turno`);
         if (ab.trapMoveLoss) L.push(`-${ab.trapMoveLoss} PM al pisarla, en el momento`);
+        if (ab.trapApLoss) L.push(`-${ab.trapApLoss} PA al pisarla, en el momento`);
         if (ab.onHitMoveGain) L.push(`+${ab.onHitMoveGain} PM si golpea`);
         if (ab.onHitLifesteal) L.push("Te cura lo que pega");
         if (ab.onHitSelfStatGain) L.push(`Ganás ${ab.onHitSelfStatGain} igual al daño hecho, todo el combate`);
@@ -122,14 +129,24 @@ export function effectLines(ab, n, opts = {}) {
     if (ab.healStats) L.push(`Cura ${n.heal} a un aliado o a vos`);
 
     if (ab.shieldStats) {
-        L.push(`Escudo de ${n.shield} a un aliado o a vos`);
+        L.push(ab.shieldsAllies ? `Escudo de ${n.shield} a vos y a todos tus aliados` : `Escudo de ${n.shield} a un aliado o a vos`);
         L.push("Se gasta antes que la vida; no se suma, queda el más grande");
     }
 
     if (ab.buffStats) {
         if (ab.buffType === "AP") L.push(`+${n.buff} PA: a vos al instante, a un aliado en su próximo turno`);
+        else if (ab.buffType === "damageMove") {
+            const move = ab.buffMove ? ` y +${ab.buffMove} PM` : "";
+            L.push(`+${n.buff} de daño${move} a un aliado en su próximo turno${ab.alliesOnly ? "" : " (a vos: al instante)"}`);
+        }
         else L.push(`+${n.buff} de daño ${ab.buffsAllies ? "a vos y tus aliados" : "a vos"} hasta tu próximo turno`);
     }
+
+    if (ab.buffType === "move") {
+        L.push(`+${ab.buffMove || 0} PM a un aliado en su próximo turno${ab.alliesOnly ? "" : " (a vos: al instante)"}`);
+    }
+    if (ab.alliesOnly) L.push("Solo sobre aliados, no sobre vos");
+    if (ab.apNextTurn) L.push(`Guardás ${ab.apNextTurn} PA: los tenés de más en tu próximo turno`);
 
     if (ab.dodgeStats) L.push(`${n.dodge}% de esquivar todo el daño hasta tu próximo turno`);
 
@@ -172,6 +189,7 @@ export function shortLine(ab, n, opts = {}) {
         if (ab.onHitMpDrain) parts.push(`-${ab.onHitMpDrain} PM`);
         if (ab.onHitApDrain) parts.push(`-${ab.onHitApDrain} PA`);
         if (ab.trapMoveLoss) parts.push(`-${ab.trapMoveLoss} PM`);
+        if (ab.trapApLoss) parts.push(`-${ab.trapApLoss} PA`);
         if (ab.onHitSelfStatGain) parts.push(`+${ab.onHitSelfStatGain}`);
     } else if (ab.reductionStats) {
         parts.push(`Reduce ${n.reduction}`);
@@ -181,6 +199,15 @@ export function shortLine(ab, n, opts = {}) {
     } else if (ab.buffType === "AP") {
         parts.push(`+${n.buff} PA`);
         if (rangeText) parts.push(rangeText);
+    } else if (ab.buffType === "move") {
+        parts.push(`+${ab.buffMove || 0} PM`);
+        if (rangeText) parts.push(rangeText);
+    } else if (ab.apNextTurn) {
+        parts.push(`+${ab.apNextTurn} PA próx. turno`);
+    } else if (ab.buffType === "damageMove") {
+        parts.push(`+${n.buff} daño`);
+        if (ab.buffMove) parts.push(`+${ab.buffMove} PM`);
+        if (rangeText) parts.push(rangeText);
     } else if (ab.buffStats) {
         parts.push(`+${n.buff} daño`);
     } else if (ab.healStats) {
@@ -189,7 +216,7 @@ export function shortLine(ab, n, opts = {}) {
     } else if (ab.selfStatBoost) {
         for (const [st, p] of Object.entries(ab.selfStatBoost)) parts.push(`${st} +${pct(p)}%`);
     } else if (ab.shieldStats) {
-        parts.push(`Escudo ${n.shield}`);
+        parts.push(ab.shieldsAllies ? `Escudo ${n.shield} a todos` : `Escudo ${n.shield}`);
         if (rangeText) parts.push(rangeText);
     } else if (ab.apGrantAll) {
         parts.push(`+${ab.apGrantAll} PA a todos`);
@@ -214,7 +241,8 @@ export function compactLine(ab, n) {
     if (n.reduction != null) p.push(`Reduce ${n.reduction}`);
     if (n.heal != null) p.push(`Cura ${n.heal}`);
     if (n.shield != null) p.push(`Escudo ${n.shield}`);
-    if (n.buff != null) p.push(ab.buffType === "AP" ? `+${n.buff} PA` : `+${n.buff} daño`);
+    if (n.buff != null) p.push(ab.buffType === "AP" ? `+${n.buff} PA`
+        : ab.buffType === "damageMove" && ab.buffMove ? `+${n.buff} daño · +${ab.buffMove} PM` : `+${n.buff} daño`);
     if (n.dodge != null) p.push(`Esquiva ${n.dodge}%`);
     return p.join(" · ");
 }
@@ -305,6 +333,20 @@ export function passiveLines(pas, getStat = null) {
             ? `${Math.max(1, Math.floor(avgOf(r.stats, getStat) / r.divisor))}`
             : `promedio de ${listEs(r.stats)} ÷ ${r.divisor} (mínimo 1)`;
         L.push(cap(`${when}reduce ${amount} el daño recibido${capTxt}`));
+    }
+
+    // Recibe menos de todo el daño (ej: Dureza, 0.85 → "recibe el 85%").
+    if (pas.damageTakenMultiplier != null) {
+        L.push(cap(`${when}recibe el ${pct(pas.damageTakenMultiplier)}% del daño (antes de reducciones)`));
+    }
+
+    // Resistencia por tipo de daño (ej: { fuego: 0.5 } → "recibe la mitad").
+    if (pas.damageTypeResist) {
+        for (const [type, mult] of Object.entries(pas.damageTypeResist)) {
+            const txt = DAMAGE_TYPE_TEXT[type] ?? ` de ${type}`;
+            const amount = mult === 0.5 ? "la mitad del" : `${pct(mult)}% del`;
+            L.push(cap(`${when}recibe ${amount} daño${txt} (antes de reducciones)`));
+        }
     }
 
     if (pas.elusiveness) {

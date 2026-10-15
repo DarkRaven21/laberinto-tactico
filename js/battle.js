@@ -671,12 +671,15 @@ async function performAttack(attacker, target, key) {
     // maldecir al blanco, pero SOLO si el golpe hizo daño de verdad. Cada
     // stat baja en el daño realmente hecho y la reducción dura todo el
     // combate (se acumula si vuelve a pegarle).
-    if (ab.debuffStats && dmg > 0) {
+    // debuffRatio (opcional): fracción del daño que se resta, redondeando
+    // para abajo (Maldición Necrótica: 0.5). Sin el campo, el daño entero.
+    const curseAmount = ab.debuffStats && dmg > 0 ? Math.floor(dmg * (ab.debuffRatio ?? 1)) : 0;
+    if (curseAmount > 0) {
         target.statDebuffs = target.statDebuffs || {};
         ab.debuffStats.forEach(st => {
-            target.statDebuffs[st] = (target.statDebuffs[st] || 0) + dmg;
+            target.statDebuffs[st] = (target.statDebuffs[st] || 0) + curseAmount;
         });
-        addLog(`${tgtLabel} queda maldito: -${dmg} a ${ab.debuffStats.join(", ")} hasta el final del combate.`);
+        addLog(`${tgtLabel} queda maldito: -${curseAmount} a ${ab.debuffStats.join(", ")} hasta el final del combate.`);
     }
 
     // Genérico: debuffPercent baja un porcentaje de stats durante el
@@ -884,6 +887,35 @@ async function performAllyBuff(caster, target, key) {
             target.apBonusPending = (target.apBonusPending || 0) + amount;
             addLog(`${casterLabel} usa ${ab.name} sobre ${targetLabel}: +${amount} PA en su próximo turno.`, "dmg-tag");
         }
+    } else if (ab.buffType === "damageMove") {
+        // Motivar: +daño (el mismo bonus que usa Comandar, commandBonus) y
+        // +PM. El bonus de daño dura hasta el final del próximo turno del
+        // blanco (se borra al terminar su turno, igual que Comandar).
+        // Sobre otro: los PM llegan al arrancar su próximo turno
+        // (moveBonusPending). Sobre uno mismo: los PM se suman al instante.
+        // buffMove es opcional: Grow (Murlock Buffer) da solo daño.
+        const move = ab.buffMove || 0;
+        const moveText = move ? ` y +${move} PM` : "";
+        target.commandActive = true;
+        target.commandBonus = (target.commandBonus || 0) + amount;
+        if (target === caster) {
+            caster.move += move;
+            addLog(`${casterLabel} usa ${ab.name} sobre sí mismo: +${amount} de daño este turno${move ? ` y +${move} PM ya` : ""}.`, "dmg-tag");
+        } else {
+            target.moveBonusPending = (target.moveBonusPending || 0) + move;
+            addLog(`${casterLabel} usa ${ab.name} sobre ${targetLabel}: +${amount} de daño${moveText} en su próximo turno.`, "dmg-tag");
+        }
+    } else if (ab.buffType === "move") {
+        // Run (Murlock Buffer): +buffMove PM fijos, sin stats. Sobre otro,
+        // al arrancar su próximo turno; sobre uno mismo, al instante.
+        const move = ab.buffMove || 0;
+        if (target === caster) {
+            caster.move += move;
+            addLog(`${casterLabel} usa ${ab.name} sobre sí mismo y gana ${move} PM.`, "dmg-tag");
+        } else {
+            target.moveBonusPending = (target.moveBonusPending || 0) + move;
+            addLog(`${casterLabel} usa ${ab.name} sobre ${targetLabel}: +${move} PM en su próximo turno.`, "dmg-tag");
+        }
     }
 
     renderSide();
@@ -1028,7 +1060,7 @@ async function placeTrap(caster, key, pos) {
     caster.ap -= ab.apCost;
     if (ab.cooldown) caster.cooldowns[key] = ab.cooldown;
     const dmg = computeAbilityDamage(caster, key);
-    state.traps.push({ pos, ownerIsPlayer: sideOf(caster) === "player", dmg, damageType: ab.damageType, moveLoss: ab.trapMoveLoss || 0 });
+    state.traps.push({ pos, ownerIsPlayer: sideOf(caster) === "player", dmg, damageType: ab.damageType, moveLoss: ab.trapMoveLoss || 0, apLoss: ab.trapApLoss || 0 });
 
     const label = caster === state.player ? "Jugador" : caster.label;
     addLog(`${label} coloca una trampa oculta.`);
@@ -1056,7 +1088,10 @@ async function triggerTrapIfAny(unit, pos) {
     // Sand Trap: el PM se pierde en el acto (no en el próximo turno).
     const moveLost = trap.moveLoss && unit.hp > 0 ? Math.min(trap.moveLoss, Math.max(0, unit.move)) : 0;
     if (moveLost) unit.move -= moveLost;
-    const moveText = moveLost ? ` y pierde ${moveLost} PM` : "";
+    // Water Trap: el PA también se pierde en el acto.
+    const apLost = trap.apLoss && unit.hp > 0 ? Math.min(trap.apLoss, Math.max(0, unit.ap)) : 0;
+    if (apLost) unit.ap -= apLost;
+    const moveText = (moveLost ? ` y pierde ${moveLost} PM` : "") + (apLost ? ` y pierde ${apLost} PA` : "");
     addLog(`${label} pisa una trampa oculta y recibe ${dmg} de daño${moveText}.`, "dmg-tag");
     renderSide();
     renderLog();
@@ -1189,6 +1224,11 @@ async function castNoTarget(caster, key, label) {
         const allies = alliesOf(caster);
         allies.forEach(a => { a.moveBonusPending = (a.moveBonusPending || 0) + extraMove; });
         addLog(`${label} usa ${ab.name}: +${extraMove} PM para ${allies.length} aliado(s) en su próximo turno.`);
+    } else if (ab.apNextTurn) {
+        // Prepare (Nier Bolg): cuesta su PA ahora y da +apNextTurn PA al
+        // arrancar el próximo turno de quien lo usa (apBonusPending).
+        caster.apBonusPending = (caster.apBonusPending || 0) + ab.apNextTurn;
+        addLog(`${label} usa ${ab.name}: +${ab.apNextTurn} PA en su próximo turno.`);
     } else if (ab.resourceGrant) {
         // Genérico: a diferencia de onHitMoveGain (que depende de
         // conectar un golpe), esto se aplica siempre al castear, sin
@@ -1213,6 +1253,16 @@ async function castNoTarget(caster, key, label) {
             parts.push(`+${Math.round(pct * 100)}% ${stat}`);
         }
         addLog(`${label} usa ${ab.name}: ${parts.join(", ")} durante este turno.`);
+    } else if (ab.shieldStats && ab.shieldsAllies) {
+        // Escudo grupal (Impulso Necrótico): a quien lo lanza y a todos sus
+        // aliados vivos. Como Escudo, no se suma: queda el más grande.
+        const amount = computeAbilityShield(caster, key);
+        const group = [caster, ...alliesOf(caster)];
+        let given = 0;
+        group.forEach(u => {
+            if ((u.shield || 0) < amount) { u.shield = amount; given++; }
+        });
+        addLog(`${label} usa ${ab.name}: escudo de ${amount} para ${given} de ${group.length} (quien ya tenía uno igual o mayor lo conserva).`);
     }
     if (caster === state.player) {
         renderHand();
@@ -1224,10 +1274,12 @@ async function castNoTarget(caster, key, label) {
     if (summoned) fxAura(summoned.pos, "buff");
     else if (ab.reductionStats) fxAura(caster.pos, "shield");
     else if (ab.dodgeStats || ab.resourceGrant) fxAura(caster.pos, "dodge");
+    else if (ab.apNextTurn) fxAura(caster.pos, "buff");
     else if (ab.buffStats) (ab.buffsAllies ? [caster, ...alliesOf(caster)] : [caster]).forEach(u => fxAura(u.pos, "buff"));
     else if (ab.alliesNextTurnGrant) alliesOf(caster).forEach(u => fxAura(u.pos, "buff"));
     else if (ab.apGrantAll) [caster, ...alliesOf(caster)].forEach(u => fxAura(u.pos, "buff"));
     else if (ab.selfStatBoost) fxAura(caster.pos, "buff");
+    else if (ab.shieldStats && ab.shieldsAllies) [caster, ...alliesOf(caster)].forEach(u => fxAura(u.pos, "shield"));
     await sleep(450);
 }
 
@@ -1277,7 +1329,8 @@ async function handleCellClick(i) {
         }
 
         if (ab.targetType === "ally") {
-            const target = selfAndAlliesOf(u).find(a => a.pos === i);
+            // alliesOnly (Grow, Run): no se puede usar sobre uno mismo.
+            const target = (ab.alliesOnly ? alliesOf(u) : selfAndAlliesOf(u)).find(a => a.pos === i);
             if (!target) return;
             state.selection = null;
             state.busy = true;
@@ -1606,6 +1659,23 @@ function passiveDodgeChanceOf(unit) {
 // Tope de esquiva total, el mismo que usa computeDodgeChance para Evasión.
 const MAX_DODGE_CHANCE = 85;
 
+// Multiplicador del daño recibido según las pasivas activas:
+//   damageTypeResist: solo un tipo (Resistencia al Fuego, { fuego: 0.5 }).
+//   damageTakenMultiplier: todo el daño (Dureza, 0.85).
+// Varias pasivas se multiplican entre sí. 1 = sin cambio.
+function damageTakenMultiplierOf(unit, damageType) {
+    if (!unit.passives || unit.passives.length === 0) return 1;
+    checkPassives(unit); // por si es una pasiva siempre activa que todavía no se marcó
+    let mult = 1;
+    unit.passives.forEach(key => {
+        const p = PASSIVES[key];
+        if (!unit.passivesActive[key]) return;
+        if (p.damageTypeResist && p.damageTypeResist[damageType] != null) mult *= p.damageTypeResist[damageType];
+        if (p.damageTakenMultiplier != null) mult *= p.damageTakenMultiplier;
+    });
+    return mult;
+}
+
 function applyDamage(unit, rawDamage, damageType = "normal") {
     // Esquiva activa (Evasión) + esquiva pasiva se suman en UNA sola
     // tirada, con el mismo tope de 85%.
@@ -1613,6 +1683,10 @@ function applyDamage(unit, rawDamage, damageType = "normal") {
     const dodgeChance = Math.min(MAX_DODGE_CHANCE, activeDodge + passiveDodgeChanceOf(unit));
     if (dodgeChance > 0 && Math.random() * 100 < dodgeChance) return { dmg: 0, dodged: true };
     let dmg = rawDamage;
+    // Resistencias de pasivas (por tipo o a todo): se aplican al daño
+    // bruto, ANTES de las reducciones y del escudo. Redondea para abajo.
+    const typeMult = damageTakenMultiplierOf(unit, damageType);
+    if (typeMult !== 1) dmg = Math.floor(dmg * typeMult);
     let totalReduction = passiveReductionOf(unit);
     if (unit.defendActive) {
         let reduction = unit.defendReduction || 0;
@@ -1921,11 +1995,25 @@ async function runUnitAiTurn(u) {
             continue;
         }
 
+        // Escudo grupal (después de invocar, así el invocado también lo
+        // recibe): si alguien del grupo, contándose, quedaría con más escudo.
+        const groupShieldKey = u.abilities.find(k => {
+            const gab = ABILITIES[k];
+            return gab.shieldStats && gab.shieldsAllies && u.ap >= gab.apCost && !(gab.cooldown && u.cooldowns[k] > 0);
+        });
+        if (groupShieldKey) {
+            const amount = computeAbilityShield(u, groupShieldKey);
+            if ([u, ...alliesOf(u)].some(a => (a.shield || 0) < amount)) {
+                await castNoTarget(u, groupShieldKey, u.label);
+                continue;
+            }
+        }
+
         // Escudo (después de invocar, así el recién invocado puede recibirlo):
         // a un aliado a alcance que no tenga ya un escudo igual o mayor.
         const shieldKey = u.abilities.find(k => {
             const sab = ABILITIES[k];
-            return sab.shieldStats && u.ap >= sab.apCost && !(sab.cooldown && u.cooldowns[k] > 0);
+            return sab.shieldStats && !sab.shieldsAllies && u.ap >= sab.apCost && !(sab.cooldown && u.cooldowns[k] > 0);
         });
         if (shieldKey) {
             const sab = ABILITIES[shieldKey];
@@ -2194,6 +2282,15 @@ async function runUnitAiTurn(u) {
         }
 
         break;
+    }
+
+    // Guardar PA (Prepare): al terminar sus acciones, si le sobra PA para pagarlo.
+    if (!state.gameOver && u.hp > 0) {
+        const saveKey = u.abilities.find(k => {
+            const sab = ABILITIES[k];
+            return sab.apNextTurn && u.ap >= sab.apCost && !(sab.cooldown && u.cooldowns[k] > 0);
+        });
+        if (saveKey) await castNoTarget(u, saveKey, u.label);
     }
 
     //Reset de buffs
@@ -2518,7 +2615,7 @@ function checkTextNumbers(u, key, nums) {
     if (ab.reductionStats) pairs.push(["reducción", nums.reduction, computeAbilityReduction(u, key)]);
     if (ab.healStats) pairs.push(["cura", nums.heal, computeAbilityHeal(u, key)]);
     if (ab.shieldStats) pairs.push(["escudo", nums.shield, computeAbilityShield(u, key)]);
-    if (ab.buffStats) pairs.push(["buff", nums.buff, ab.buffType === "AP" ? computeAbilityBuffAmount(u, key) : computeAbilityBuff(u, key)]);
+    if (ab.buffStats) pairs.push(["buff", nums.buff, ab.buffType ? computeAbilityBuffAmount(u, key) : computeAbilityBuff(u, key)]);
     if (ab.dodgeStats) pairs.push(["esquiva", nums.dodge, computeDodgeChance(u, key)]);
     for (const [what, shown, real] of pairs) {
         if (shown === real) continue;

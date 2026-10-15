@@ -92,5 +92,22 @@ export const PASSIVES = {
         damageType: "acido",
         meleeOnly: true, // solo si el atacante está pegado (distancia 1) al recibir el golpe
     },
+    // Flying Countess (familia infernal). damageTypeResist: multiplica el
+    // daño bruto de ese tipo ANTES de reducciones y escudo, redondeando
+    // para abajo. Genérico: sirve para cualquier tipo de daño (ver
+    // damageTypeMultiplierOf / applyDamage en battle.js).
+    fireResist: {
+        name: "Resistencia al Fuego",
+        hpThreshold: 1, // siempre activa
+        damageTypeResist: { fuego: 0.5 },
+    },
+    // Reborn (familia undead). Con 50% de vida o menos, recibe el 85% del
+    // daño bruto, antes de reducciones y escudo, redondeando para abajo.
+    // damageTakenMultiplier es genérico: vale para todo tipo de daño.
+    hardened: {
+        name: "Dureza",
+        hpThreshold: 0.5,
+        damageTakenMultiplier: 0.85,
+    },
 
 };

@@ -40,6 +40,8 @@ const FAMILY_NAMES = {
     orc: "Orcos",
     mind: "Mentes",
     grok: "Groks",
+    infernal: "Infernales",
+    undead: "No Muertos",
 };
 
 // Grietas. La tabla rifts no se lee desde el cliente, así que acá va a

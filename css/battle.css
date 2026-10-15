@@ -500,6 +500,27 @@ svg.lucide-icon {
 /* Las bloqueadas son roca; la grieta al vacío la pone el obstáculo "chasm" */
 .biome-mountain .cell:not(.active) { background: #5e5951; }
 
+/* ---- Infierno (familia infernal) ---- */
+.board-wrap.biome-hell {
+    border-color: #4a1f17;
+    background:
+        radial-gradient(ellipse at 20% 85%, #4a1a12 0%, transparent 55%),
+        radial-gradient(ellipse at 85% 15%, #34120e 0%, transparent 50%),
+        #1a0b09;
+}
+/* Resplandor de lava desde abajo y bordes en penumbra */
+.board-wrap.biome-hell::after {
+    background:
+        radial-gradient(circle at 25% 75%, rgba(255, 110, 40, 0.09) 0, transparent 26%),
+        radial-gradient(circle at 72% 40%, rgba(255, 140, 60, 0.06) 0, transparent 20%),
+        radial-gradient(ellipse at 50% 50%, transparent 55%, rgba(0, 0, 0, 0.3) 100%);
+}
+.biome-hell .cell.active.tone-0 { background: radial-gradient(circle at 35% 30%, #3e2d2b 0, #2e2120 70%); }
+.biome-hell .cell.active.tone-1 { background: radial-gradient(circle at 60% 40%, #3a2a28 0, #2b1f1e 70%); }
+.biome-hell .cell.active.tone-2 { background: radial-gradient(circle at 45% 65%, #442f2c 0, #322322 70%); }
+/* Las bloqueadas son basalto; la lava la pone el obstáculo "lavaRiver" */
+.biome-hell .cell:not(.active) { background: #1d1211; }
+
 @media (prefers-reduced-motion: reduce) {
     .board-wrap[class*="biome-"]::after,
     .turn-ring { animation: none; }

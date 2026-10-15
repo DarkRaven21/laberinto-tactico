@@ -768,4 +768,265 @@ export const ABILITIES = {
         summonLabel: "Goblin Trapper",
         desc: "Invoca un Goblin Trapper a tu lado · CD 4"
     },
+
+    // ---------- Familia infernal (nivel 5) ----------
+    // Low Demon. Espada encendida: arma, fuerza y cuerpo + furia, ímpetu y magia.
+    // Sin CD: se puede usar varias veces por turno.
+    fireSword: {
+        name: "Espada Ígnea", range: 1, apCost: 1, cooldown: 0, needsTarget: true, targetType: "enemy",
+        damageStats: ["Arma Melee", "Fuerza", "Atletismo", "Agresividad", "Impetu", "Afinidad mágica"],
+        damageMultiplier: 1.1,
+        damageType: "fuego",
+        fx: { projectile: "none" },
+        desc: "Alcance 1"
+    },
+    // Gorg / Nilbolg. Látigo mágico: el foco y la magia lo encienden;
+    // percepción y reflejos para acertar a distancia. Sin CD.
+    fireLash: {
+        name: "Látigo de Fuego", range: 2, apCost: 2, cooldown: 0, needsTarget: true, targetType: "enemy",
+        damageStats: ["Foco Magico", "Afinidad mágica", "Agresividad", "Impetu", "Percepción", "Reflejos"],
+        damageMultiplier: 2.2,
+        damageType: "fuego",
+        fx: { projectile: "none" },
+        desc: "Alcance 2"
+    },
+    // Gorg / Cambion. Salto Perforante con stats de fuego (leapAttack).
+    fireTeleport: {
+        name: "Salto Ígneo", range: 2, apCost: 2, cooldown: 1, needsTarget: true, targetType: "empty",
+        leapAttack: true,
+        aoeRadius: 1,
+        selfCentered: true,
+        opponentsOnly: true,
+        damageStats: ["Afinidad mágica", "Impetu", "Movilidad", "Impulsividad", "Foco Magico"],
+        damageMultiplier: 1.75,
+        damageType: "fuego",
+        desc: "Alcance 2 · Saltás a la casilla y dañás a los rivales pegados · CD 1"
+    },
+    // Nilbolg. Fuego y roca: fortaleza y terquedad le dan el peso de la piedra.
+    lavaBurst: {
+        name: "Estallido de Lava", range: 3, apCost: 3, cooldown: 2, needsTarget: true, targetType: "area",
+        aoeRadius: 1,
+        opponentsOnly: true,
+        damageStats: ["Foco Magico", "Afinidad mágica", "Impetu", "Agresividad", "Fortaleza", "Terquedad"],
+        damageMultiplier: 3,
+        damageType: "fuego",
+        fx: { projectile: "orb", arc: true },
+        desc: "Alcance 3 · Explota en cruz (radio 1) · Solo daña a rivales · CD 2"
+    },
+    // Hell Soldier / Cambion. Golpe de soldado entrenado. Sin CD.
+    multiattack: {
+        name: "Multiataque", range: 1, apCost: 2, cooldown: 0, needsTarget: true, targetType: "enemy",
+        damageStats: ["Fuerza", "Atletismo", "Agresividad", "Disciplina", "Arma Melee"],
+        damageMultiplier: 2.5,
+        damageType: "normal",
+        desc: "Alcance 1"
+    },
+    // Hell Soldier. Como Escudo de Hielo: reduce x2 contra todo daño que no
+    // sea normal y devuelve x0.5 de la reducción.
+    fireShield: {
+        name: "Escudo de Fuego", range: 0, apCost: 1, cooldown: 3, needsTarget: false,
+        reductionStats: ["Resistencia", "Resistencia Mágica", "Agresividad", "Impetu", "Disciplina", "Foco Magico"],
+        magicResistant: true,
+        retaliateMultiplier: 0.5,
+        desc: "Reduce el daño recibido hasta tu próximo turno (x2 contra daño que no sea normal) · CD 3"
+    },
+    // Tamer. Hechizo grande a distancia, un solo blanco.
+    fireColumn: {
+        name: "Columna de Fuego", range: 4, apCost: 3, cooldown: 1, needsTarget: true, targetType: "enemy",
+        damageStats: ["Foco Magico", "Afinidad mágica", "Concentración", "Sabiduría", "Impetu"],
+        damageMultiplier: 2.7,
+        damageType: "fuego",
+        fx: { projectile: "none" },
+        desc: "Alcance 4 · CD 1"
+    },
+    // Tamer. buffType "damageMove": +daño (floor(promedio × buffMultiplier),
+    // mínimo 1) y +buffMove PM al aliado en su próximo turno; sobre uno
+    // mismo, al instante. Solo stats personales: los ítems no la inflan.
+    // La IA nunca se lo tira a sí misma (allyBuffAbilitiesOf usa alliesOf).
+    impulse: {
+        name: "Motivar", range: 3, apCost: 1, cooldown: 1, needsTarget: true, targetType: "ally",
+        buffStats: ["Liderazgo", "Inspiracion", "Carisma", "Confianza", "Impetu", "Agresividad"],
+        buffMultiplier: 0.5,
+        buffType: "damageMove",
+        buffMove: 2,
+        desc: "Alcance 3 · +daño y +2 PM a un aliado en su próximo turno · CD 1"
+    },
+    // Tamer.
+    summonCursedHound: {
+        name: "Invocar Sabueso Maldito", range: 0, apCost: 3, cooldown: 4, needsTarget: false,
+        summon: "cursedHound",
+        summonLabel: "Cursed Hound",
+        desc: "Invoca un Cursed Hound a tu lado · CD 4"
+    },
+
+    // ---------- Familia undead (nivel 5) ----------
+    // Death Knight. Como Puño Necrótico, con espada. Sin CD.
+    necroSword: {
+        name: "Espada Necrótica", range: 1, apCost: 2, cooldown: 0, needsTarget: true, targetType: "enemy",
+        damageStats: ["Arma Melee", "Fuerza", "Espiritu", "Resiliencia", "Determinación"],
+        damageMultiplier: 2,
+        damageType: "oscuro",
+        fx: { projectile: "none" },
+        desc: "Alcance 1"
+    },
+    // Vampire Spawn / Vampire. Sin equipo. Si golpea, gana Espiritu igual
+    // al daño hecho todo el combate (onHitSelfStatGain): como Espiritu está
+    // en sus stats, cada mordida pega más que la anterior.
+    bite: {
+        name: "Mordida", range: 1, apCost: 1, cooldown: 1, needsTarget: true, targetType: "enemy",
+        damageStats: ["Espiritu", "Agresividad", "Instinto", "Regeneración", "Impulsividad", "Fuerza"],
+        damageMultiplier: 1.3,
+        damageType: "normal",
+        onHitSelfStatGain: "Espiritu",
+        desc: "Alcance 1 · Ganás Espiritu igual al daño hecho, todo el combate · CD 1"
+    },
+    // Vampire Spawn / Vampire. Zarpazo rápido. Sin CD.
+    claw: {
+        name: "Garra", range: 1, apCost: 1, cooldown: 0, needsTarget: true, targetType: "enemy",
+        damageStats: ["Arma Melee", "Fuerza", "Agresividad", "Reflejos", "Acrobacias"],
+        damageMultiplier: 0.8,
+        damageType: "normal",
+        desc: "Alcance 1"
+    },
+    // Horde Commander. Escudo grupal (shieldsAllies): a quien lo lanza y a
+    // todos sus aliados vivos. No se suma: queda el más grande.
+    necroBoost: {
+        name: "Impulso Necrótico", range: 0, apCost: 2, cooldown: 2, needsTarget: false,
+        shieldStats: ["Liderazgo", "Inspiracion", "Espiritu", "Determinación", "Armadura"],
+        shieldMultiplier: 1,
+        shieldsAllies: true,
+        desc: "Escudo a vos y a todos tus aliados · CD 2"
+    },
+    // Horde Commander. Tiro Lejano nigromántico: Espiritu en vez de
+    // Atletismo y Foco Mágico en vez de Arma Distancia.
+    necroShot: {
+        name: "Disparo Necrótico", range: 5, apCost: 3, cooldown: 2, needsTarget: true, targetType: "enemy",
+        damageStats: ["Espiritu", "Mentalidad táctica", "Percepción", "Paciencia", "Foco Magico"],
+        damageMultiplier: 1.9,
+        damageType: "oscuro",
+        fx: { projectile: "orb", arc: false },
+        desc: "Alcance 5 · CD 2"
+    },
+    // Necromancer. Mismos stats que Maldición; baja los stats del blanco en
+    // la mitad del daño hecho (debuffRatio), todo el combate, acumulado.
+    necroCurse: {
+        name: "Maldición Necrótica", range: 3, apCost: 2, cooldown: 1, needsTarget: true, targetType: "enemy",
+        damageStats: ["Concentración", "Sabiduría", "Carisma", "Agresividad", "Foco Magico"],
+        damageMultiplier: 2,
+        damageType: "oscuro",
+        fx: { projectile: "none" },
+        debuffStats: ["Fuerza", "Reflejos", "Sensibilidad al dolor", "Agudeza mental", "Iniciativa", "Instinto"],
+        debuffRatio: 0.5,
+        desc: "Alcance 3 · Maldice: baja stats en la mitad del daño hecho · CD 1"
+    },
+    // Shadow Mother.
+    summonSpecter: {
+        name: "Invocar Espectro", range: 0, apCost: 3, cooldown: 4, needsTarget: false,
+        summon: "specter",
+        summonLabel: "Specter",
+        desc: "Invoca un Specter a tu lado · CD 4"
+    },
+    // Death Knight: un esqueleto distinto por turno (CD 4 cada uno).
+    summonSkeletonArcher: {
+        name: "Invocar Esqueleto Arquero", range: 0, apCost: 3, cooldown: 4, needsTarget: false,
+        summon: "skeletonArcher",
+        summonLabel: "Skeleton Archer",
+        desc: "Invoca un Skeleton Archer a tu lado · CD 4"
+    },
+    summonSkeletonShield: {
+        name: "Invocar Esqueleto Escudo", range: 0, apCost: 3, cooldown: 4, needsTarget: false,
+        summon: "skeletonShield",
+        summonLabel: "Skeleton Shield",
+        desc: "Invoca un Skeleton Shield a tu lado · CD 4"
+    },
+    summonSkeletonSpear: {
+        name: "Invocar Esqueleto Lancero", range: 0, apCost: 3, cooldown: 4, needsTarget: false,
+        summon: "skeletonSpear",
+        summonLabel: "Skeleton Spear",
+        desc: "Invoca un Skeleton Spear a tu lado · CD 4"
+    },
+    // Necromancer.
+    summonCorpseGolem: {
+        name: "Invocar Gólem de Cadáveres", range: 0, apCost: 3, cooldown: 4, needsTarget: false,
+        summon: "corpseGolem",
+        summonLabel: "Corpse Golem",
+        desc: "Invoca un Corpse Golem a tu lado · CD 4"
+    },
+
+    // ---------- Familia seaNier (nivel 5) ----------
+    // Murlock Buffer. +daño a un aliado (como Motivar, sin PM). Solo stats
+    // personales. alliesOnly: no se puede usar sobre uno mismo.
+    grow: {
+        name: "Crecer", range: 4, apCost: 1, cooldown: 1, needsTarget: true, targetType: "ally",
+        buffStats: ["Afinidad mágica", "Espiritu", "Inspiracion", "Confianza", "Concentración", "Sabiduría"],
+        buffMultiplier: 0.75,
+        buffType: "damageMove",
+        alliesOnly: true,
+        desc: "Alcance 4 · +daño a un aliado en su próximo turno · CD 1"
+    },
+    // Murlock Buffer. +1 PM fijo a un aliado, sin stats. Solo aliados.
+    run: {
+        name: "Correr", range: 3, apCost: 1, cooldown: 1, needsTarget: true, targetType: "ally",
+        buffType: "move",
+        buffMove: 1,
+        alliesOnly: true,
+        desc: "Alcance 3 · +1 PM a un aliado en su próximo turno · CD 1"
+    },
+    // Siren. Columna de agua (daño de hielo).
+    aquaColumn: {
+        name: "Columna de Agua", range: 3, apCost: 2, cooldown: 2, needsTarget: true, targetType: "enemy",
+        damageStats: ["Afinidad mágica", "Concentración", "Sabiduría", "Creatividad", "Foco Magico"],
+        damageMultiplier: 2.3,
+        damageType: "hielo",
+        fx: { projectile: "none" },
+        desc: "Alcance 3 · CD 2"
+    },
+    // Siren. Canto de sirena: encanta con la voz. Si golpea, -1 PA.
+    song: {
+        name: "Canto", range: 3, apCost: 2, cooldown: 1, needsTarget: true, targetType: "enemy",
+        damageStats: ["Carisma", "Persuasión", "Inspiracion", "Confianza", "Foco Magico"],
+        damageMultiplier: 1.5,
+        damageType: "psychic",
+        onHitApDrain: 1,
+        desc: "Alcance 3 · -1 PA al golpeado · CD 1"
+    },
+    // Murlock Hunter. Funciona como Trampa de Arena, pero con agua: más
+    // daño (x2, con Foco Mágico) y al pisarla se pierde 1 PA en el acto.
+    waterTrap: {
+        name: "Trampa de Agua", range: 3, apCost: 1, cooldown: 1, needsTarget: true, targetType: "trap",
+        damageStats: ["Ingenio", "Percepción", "Paciencia", "Afinidad mágica", "Foco Magico"],
+        damageMultiplier: 2,
+        damageType: "hielo",
+        trapApLoss: 1,
+        desc: "Alcance 3 · Trampa oculta: daño y -1 PA al pisarla · CD 1"
+    },
+    // Nier Bolg. Como Salto Ígneo: cae en una casilla vacía a 4 o menos y
+    // daña en cruz alrededor, solo a rivales.
+    geyser: {
+        name: "Géiser", range: 4, apCost: 4, cooldown: 2, needsTarget: true, targetType: "empty",
+        leapAttack: true,
+        aoeRadius: 1,
+        selfCentered: true,
+        opponentsOnly: true,
+        damageStats: ["Afinidad mágica", "Impetu", "Movilidad", "Fortaleza", "Foco Magico"],
+        damageMultiplier: 4.2,
+        damageType: "hielo",
+        desc: "Alcance 4 · Saltás a la casilla y dañás a los rivales pegados · CD 2"
+    },
+    // Nier Bolg. 4 stats: el Foco Mágico pesa 1/4. Sin CD.
+    waterShot: {
+        name: "Disparo de Agua", range: 3, apCost: 2, cooldown: 0, needsTarget: true, targetType: "enemy",
+        damageStats: ["Afinidad mágica", "Percepción", "Paciencia", "Foco Magico"],
+        damageMultiplier: 1.8,
+        damageType: "hielo",
+        fx: { projectile: "orb", arc: false },
+        desc: "Alcance 3"
+    },
+    // Nier Bolg. Cuesta 1 PA y da +1 PA al arrancar el próximo turno
+    // (apNextTurn). La IA lo usa al final del turno si le sobra PA.
+    prepare: {
+        name: "Preparar", range: 0, apCost: 1, cooldown: 1, needsTarget: false,
+        apNextTurn: 1,
+        desc: "Guardás 1 PA para tu próximo turno · CD 1"
+    },
 };
