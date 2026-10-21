@@ -114,6 +114,10 @@ document.getElementById("goToBestiarioBtn").addEventListener("click", () => {
     window.location.href = "bestiario.html";
 });
 
+document.getElementById("goToTabernaBtn").addEventListener("click", () => {
+    window.location.href = "taberna.html";
+});
+
 document.getElementById("goToLaberintoBtn").addEventListener("click", () => {
     window.location.href = "laberinto.html";
 });

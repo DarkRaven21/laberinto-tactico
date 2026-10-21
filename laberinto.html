@@ -7,7 +7,7 @@
   <title>Laberinto — Combate Táctico</title>
   <link rel="stylesheet" href="css/battle.css?ver=2026.10.01h">
   <link rel="stylesheet" href="css/laberinto2.css?ver=2026.10.01h">
-  <script type="module" src="js/laberinto.js?ver=2026.10.08a"></script>
+  <script type="module" src="js/laberinto.js?ver=2026.10.21a"></script>
 </head>
 
 <body class="laberinto-body">
@@ -27,6 +27,16 @@
     <!-- Mismo "Descansar" que el de abajo; solo se ve en celular, al lado
          de la vida (ver laberinto2.css). -->
     <button class="rest-btn rest-btn--card" id="restBtnCard" type="button">Descansar</button>
+  </div>
+
+  <!-- Compañero de la Taberna: lo muestra laberinto.js solo si hay uno -->
+  <div class="unit-card player" id="companionStatsCard" style="display: none;">
+    <h3 id="companionName">Compañero</h3>
+    <div class="bar-row"><span>HP</span>
+      <div class="bar-track">
+        <div class="bar-fill hp-fill" id="companionHpBar"></div>
+      </div><span id="companionHpText"></span>
+    </div>
   </div>
 
   <div class="subtitle">elegí tu camino</div>

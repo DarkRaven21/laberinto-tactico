@@ -33,7 +33,32 @@ const UNIT_TURN_GAP = 300;   // pausa entre el turno de una unidad enemiga y la 
 
 const CRITICAL_HP_RATIO = 0.35;    // se defiende/esquiva ANTES de evaluar si atacar
 const LOW_HP_FALLBACK_RATIO = 0.5;
-const CRITICAL_HP_RATIO_BY_STYLE = { defensive: 1.0 };
+const CRITICAL_HP_RATIO_BY_STYLE = { defensive: 1.0, guardian: 0.6 };
+
+// ---------- Compañero (Taberna) ----------
+// Estilo elegido al contratar → aiStyle de la IA.
+//   agresivo: la IA por defecto · tirador: escurridizo · medico: medic
+//   asesino: va por el rival con menos vida (ver pickTarget)
+//   guardian: va por el rival más cerca del jugador, lo escuda primero y
+//             se defiende antes (60% de vida)
+const COMPANION_AI_STYLE = {
+    agresivo: null,
+    asesino: "assassin",
+    guardian: "guardian",
+    tirador: "escurridizo",
+    medico: "medic"
+};
+// PM y PA del compañero: los mismos que el jugador (ver player.js).
+const COMPANION_MOVE = 3;
+const COMPANION_AP = 3;
+
+function companionUnit() {
+    return state.allies.find(a => a.isCompanion) || null;
+}
+function companionAlive() {
+    const c = companionUnit();
+    return !!(c && c.hp > 0);
+}
 
 // Aplica el bioma al tablero (clase CSS y subtítulo). La config y el
 // arte de cada bioma viven en biomes.js.
@@ -186,9 +211,23 @@ function pickTarget(u) {
     const opps = opponentsOf(u);
     if (!opps.length) return null;
     const field = bfsDistances(u.pos, new Set());
+    const distTo = o => isFinite(field[o.pos]) ? field[o.pos] : 1000 + manhattan(u.pos, o.pos);
+    const style = u.aiStyle;
+
+    // Asesino: el rival con menos vida; empate, el más cercano.
+    if (style === "assassin") {
+        return opps.slice().sort((a, b) => (a.hp - b.hp) || (distTo(a) - distTo(b)))[0];
+    }
+    // Guardián: el rival más cerca del jugador (el que lo está atacando);
+    // empate, el más cercano a sí mismo. Si el jugador cayó, como siempre.
+    if (style === "guardian" && state.player.hp > 0) {
+        const pp = state.player.pos;
+        return opps.slice().sort((a, b) => (manhattan(a.pos, pp) - manhattan(b.pos, pp)) || (distTo(a) - distTo(b)))[0];
+    }
+
     let best = null, bestD = Infinity;
     for (const o of opps) {
-        const d = isFinite(field[o.pos]) ? field[o.pos] : 1000 + manhattan(u.pos, o.pos);
+        const d = distTo(o);
         if (d < bestD || (d === bestD && o === state.player)) { best = o; bestD = d; }
     }
     return best;
@@ -359,6 +398,34 @@ async function newGame() {
     state.player.pos = pIdx;
     const used = new Set([pIdx]);
 
+    // Compañero de la Taberna: arranca en la casilla libre más cercana al
+    // jugador, con la vida que traía de la corrida. Si murió, no viene.
+    const comp = currentProgress.companion;
+    if (comp && comp.hp > 0) {
+        const unit = freshUnit({
+            hp: comp.max_hp, move: COMPANION_MOVE, ap: COMPANION_AP,
+            icon: comp.icon, label: comp.name,
+            abilities: (comp.abilities || []).filter(k => ABILITIES[k]),
+            passives: (comp.passives || []).filter(k => PASSIVES[k]),
+            stats: comp.stats || {},
+            aiStyle: COMPANION_AI_STYLE[comp.style] ?? null
+        });
+        unit.hp = Math.min(comp.hp, comp.max_hp);
+        unit.maxHp = comp.max_hp;
+        unit.id = "companion";
+        unit.label = comp.name;
+        unit.icon = comp.icon;
+        unit.side = "player";
+        unit.isCompanion = true;
+        unit.xp = 0;
+        const spots = playZone.filter(c => !used.has(c)).sort((a, b) => manhattan(a, pIdx) - manhattan(b, pIdx));
+        if (spots.length) {
+            unit.pos = spots[0];
+            used.add(unit.pos);
+            state.allies.push(unit);
+        }
+    }
+
     // Grieta: los enemigos los decide el servidor (sala actual de la
     // grieta), no el navegador. El encuentro guardado se descarta igual.
     const forced = readForcedEncounter();
@@ -403,6 +470,22 @@ async function newGame() {
     addLog(`Combate iniciado. Tablero con ${finalActiveCount} casillas activas${extra}.`, "turn");
     const roster = state.enemies.map(e => e.label).join(" y ");
     addLog(`Enfrentás a: ${roster}.`, "turn");
+    const compUnit = companionUnit();
+    if (compUnit) addLog(`${compUnit.label} pelea a tu lado.`, "turn");
+
+    // Pasivas desde el arranque: el jugador puede entrar con poca vida
+    // (viene del laberinto), y las de hpThreshold 1 están siempre activas.
+    // Antes recién se revisaban al primer golpe o curación, así que Furia
+    // de Sangre, Última Resistencia, Revoloteo, etc. no contaban en el
+    // turno 1.
+    checkPassives(state.player);
+    state.allies.forEach(checkPassives);
+    state.enemies.forEach(checkPassives);
+    // El primer turno del jugador no pasa por startPlayerTurn: se le suman
+    // acá los PA/PM que dan sus pasivas activas.
+    state.player.move = Math.max(0, state.player.maxMove + effectiveResourceBonus(state.player, "move"));
+    state.player.ap = Math.max(0, state.player.maxAp + effectiveResourceBonus(state.player, "ap"));
+
     addLog("Turno del jugador.", "turn");
 
     render();
@@ -1713,11 +1796,18 @@ async function checkGameOver() {
     // (Sangre Corrosiva, contraataque), checkGameOver se llama de nuevo y
     // antes mandaba un segundo finish-combat en paralelo.
     if (state.gameOver) return;
-    if (state.player.hp <= 0) {
+    // Con compañero, la derrota es solo si caen los dos. Si cae el jugador
+    // y el compañero sigue en pie, el combate sigue: el jugador pasa sus
+    // turnos (ver render) y, si se gana, sigue la corrida con 1 de vida.
+    if (state.player.hp <= 0 && !companionAlive()) {
         state.gameOver = true;
-        addLog("El jugador ha caído. Derrota.", "turn");
+        addLog(companionUnit() ? "Caen el jugador y su compañero. Derrota." : "El jugador ha caído. Derrota.", "turn");
         showOverlay(false);
         return;
+    }
+    if (state.player.hp <= 0 && !state.playerDownLogged) {
+        state.playerDownLogged = true;
+        addLog(`El jugador cae. ¡${companionUnit().label} sigue peleando!`, "turn");
     }
     [...state.allies, ...state.enemies].forEach(e => {
         if (e.hp <= 0 && !e._deadLogged) {
@@ -1768,7 +1858,9 @@ async function saveVictory() {
     const defeatedKeys = state.enemies.filter(e => !e.summoned).map(e => e.type);
     let result;
     try {
-        result = await finishCombat(defeatedKeys, state.player.hp);
+        // Jugador en 0 = cayó pero el compañero ganó: el servidor lo deja en 1.
+        const comp = companionUnit();
+        result = await finishCombat(defeatedKeys, Math.max(0, state.player.hp), comp ? Math.max(0, comp.hp) : null);
     } catch (err) {
         console.error("[combate] No se pudo guardar la victoria:", err);
         const sessionLost = /autorizado/i.test(err?.message || "");
@@ -1833,7 +1925,7 @@ async function safely(fn) {
         console.error("[combate] Error inesperado:", err);
         addLog("Hubo un error inesperado; el combate sigue.", "turn");
         renderLog();
-        if (!state.gameOver && (state.player.hp <= 0 || livingEnemies().length === 0)) {
+        if (!state.gameOver && ((state.player.hp <= 0 && !companionAlive()) || livingEnemies().length === 0)) {
             checkGameOver();
         }
     }
@@ -1856,8 +1948,11 @@ async function endPlayerTurn() {
     state.busy = true;
     render();
 
-    await safely(() => applyEndOfTurnRegen(state.player));
-    if (!state.gameOver) await safely(() => applyEndOfTurnDamage(state.player));
+    // Caído (con el compañero todavía en pie): sin pasivas de fin de turno.
+    if (state.player.hp > 0) {
+        await safely(() => applyEndOfTurnRegen(state.player));
+        if (!state.gameOver) await safely(() => applyEndOfTurnDamage(state.player));
+    }
     renderSide();
 
     if (state.gameOver) return; // ej: una pasiva lo dejó en 0 hp
@@ -1898,6 +1993,73 @@ async function runEnemyPhase() {
     startPlayerTurn();
 }
 
+// ---------- Elección de ataque de la IA ----------
+// Todas las opciones de ataque que la unidad puede usar YA (PA, CD,
+// alcance), contra cada rival o, en las áreas, sobre cada casilla de
+// impacto posible. Un área que no sea "solo rivales" nunca se tira si
+// agarra a quien la lanza o a un aliado (salvo aiIgnoresAllies: solo
+// evita a quien la lanza).
+// score = daño por PA × rivales alcanzados.
+function attackOptionsOf(u) {
+    const opts = [];
+    const opps = opponentsOf(u);
+    const friends = [u, ...alliesOf(u)];
+    for (const key of attackAbilitiesOf(u)) {
+        const ab = ABILITIES[key];
+        if (u.ap < ab.apCost) continue;
+        if (ab.cooldown && u.cooldowns[key] > 0) continue;
+
+        if (ab.targetType !== "area") {
+            for (const o of opps) {
+                if (!inAbilityRange(u, o.pos, ab)) continue;
+                if (ab.pullsToMelee && manhattan(u.pos, o.pos) <= 1) continue; // ya está pegado: Atraer no aporta
+                const dmg = computeAbilityDamage(u, key, o);
+                opts.push({ key, target: o, impact: o.pos, victims: [o], dmg, score: dmg / ab.apCost });
+            }
+            continue;
+        }
+
+        // Áreas: selfCentered sale siempre de su propia casilla.
+        const impacts = ab.selfCentered
+            ? [u.pos]
+            : state.cells.map((c, n) => n).filter(n => state.cells[n].active && inAbilityRange(u, n, ab));
+        for (const impact of impacts) {
+            const area = new Set(resolveAoeCells(impact, ab.aoeRadius)
+                .filter(n => !(ab.selfCentered && n === u.pos)));
+            const victims = opps.filter(o => area.has(o.pos));
+            if (!victims.length) continue;
+            // aiIgnoresAllies (Bomba de Fuego del Rey Goblin): la tira aunque
+            // agarre aliados; a sí mismo igual no se apunta.
+            const mustAvoid = ab.aiIgnoresAllies ? [u] : friends;
+            if (!ab.opponentsOnly && mustAvoid.some(f => area.has(f.pos))) continue;
+            const dmg = computeAbilityDamage(u, key, victims[0]);
+            opts.push({ key, target: victims[0], impact, victims, dmg, score: dmg * victims.length / ab.apCost });
+        }
+    }
+    return opts;
+}
+
+// El mejor ataque disponible. Primero los que alcanzan a su blanco
+// `preferred`; si ninguno llega, cualquier otro rival. Entre esos, el de
+// más daño por PA (las áreas multiplican por rivales alcanzados).
+// Empate: primero el que tiene CD (después no va a estar disponible),
+// después el de más daño total, después el orden de su lista.
+// Antes usaba el primer ataque de la lista que llegara, no el mejor.
+function bestAttackChoice(u, preferred) {
+    const all = attackOptionsOf(u);
+    if (!all.length) return null;
+    const onPreferred = all.filter(o => preferred && o.victims.includes(preferred));
+    const pool = onPreferred.length ? onPreferred : all;
+    const order = u.abilities;
+    pool.sort((a, b) =>
+        (b.score - a.score)
+        || ((ABILITIES[b.key].cooldown ? 1 : 0) - (ABILITIES[a.key].cooldown ? 1 : 0))
+        || (b.dmg * b.victims.length - a.dmg * a.victims.length)
+        || (order.indexOf(a.key) - order.indexOf(b.key))
+        || (manhattan(u.pos, a.target.pos) - manhattan(u.pos, b.target.pos)));
+    return pool[0];
+}
+
 // ---------- IA genérica (con animación) ----------
 async function runUnitAiTurn(u) {
     // Blanco: el rival más cercano (ver pickTarget). Sin invocados es
@@ -1907,6 +2069,7 @@ async function runUnitAiTurn(u) {
     let pPos = -1;
     let distToPlayer = null;
 
+    checkPassives(u); // antes de sumar PA/PM: los bonus dependen de las pasivas activas
     u.move = Math.max(0, u.maxMove + effectiveResourceBonus(u, "move") + (u.moveBonusPending || 0) - (u.moveDrainPending || 0));
     u.ap = Math.max(0, u.maxAp + effectiveResourceBonus(u, "ap") + (u.apBonusPending || 0) - (u.apDrainPending || 0));
     u.apBonusPending = 0;
@@ -1978,6 +2141,14 @@ async function runUnitAiTurn(u) {
             }
         }
 
+        // Invocar: cada vez que pueda (el CD largo lo limita). Va ANTES
+        // de Comandar/Inspirar/Coraje, así el invocado también recibe el buff.
+        const summonKey = summonAbilitiesOf(u).find(key => canSummonNow(u, key));
+        if (summonKey) {
+            await castNoTarget(u, summonKey, u.label);
+            continue;
+        }
+
         // Command (o cualquier buff futuro): se castea ANTES de intentar
         // atacar, cada vez que esté disponible — no hace falta chequear
         // si ya está activo, porque el propio cooldown evita recastearlo
@@ -1985,13 +2156,6 @@ async function runUnitAiTurn(u) {
         const buffKey = buffFallbackAbilityOf(u);
         if (buffKey) {
             await castNoTarget(u, buffKey, u.label);
-            continue;
-        }
-
-        // Invocar: cada vez que pueda (el CD largo lo limita).
-        const summonKey = summonAbilitiesOf(u).find(key => canSummonNow(u, key));
-        if (summonKey) {
-            await castNoTarget(u, summonKey, u.label);
             continue;
         }
 
@@ -2033,7 +2197,9 @@ async function runUnitAiTurn(u) {
             const mySummons = allies.filter(a => a.summonerId === myId);
             const latestSummon = mySummons[mySummons.length - 1];
             const frontliner = allies.slice().sort((a, b) => manhattan(a.pos, p.pos) - manhattan(b.pos, p.pos))[0];
-            const target = healer || injured || latestSummon || frontliner || (canGet(u) ? u : null);
+            // Guardián: el jugador va primero, si puede recibirlo.
+            const guardTarget = style === "guardian" && state.player.hp > 0 && canGet(state.player) ? state.player : null;
+            const target = guardTarget || healer || injured || latestSummon || frontliner || (canGet(u) ? u : null);
             if (target) {
                 await performShield(u, target, shieldKey);
                 continue;
@@ -2087,32 +2253,20 @@ async function runUnitAiTurn(u) {
             continue;
         }
 
-        // Primero contra su blanco; si no llega, contra cualquier otro
+        // Ataque: el mejor de los que tiene a tiro (ver bestAttackChoice),
+        // primero contra su blanco; si no llega, contra cualquier otro
         // rival que tenga a tiro (solo pasa si hay invocados).
-        const attackKeyFor = victim => attackAbilitiesOf(u).find(key => {
-            const ab = ABILITIES[key];
-            const onCooldown = ab.cooldown && u.cooldowns[key] > 0;
-            if (ab.pullsToMelee && manhattan(u.pos, victim.pos) <= 1) return false; // ya está pegado: Pull no aporta
-            return inAbilityRange(u, victim.pos, ab) && u.ap >= ab.apCost && !onCooldown;
-        });
-        let attackKey = attackKeyFor(p);
-        if (!attackKey) {
-            const others = opponentsOf(u).filter(o => o !== p)
-                .sort((a, b) => manhattan(u.pos, a.pos) - manhattan(u.pos, b.pos));
-            for (const o of others) {
-                const k = attackKeyFor(o);
-                if (k) { p = o; pPos = o.pos; distToPlayer = bfsDistances(p.pos, new Set()); attackKey = k; break; }
+        const choice = bestAttackChoice(u, p);
+        if (choice) {
+            if (choice.target && choice.target !== p) {
+                p = choice.target;
+                pPos = p.pos;
+                distToPlayer = bfsDistances(p.pos, new Set());
             }
-        }
-        if (attackKey) {
-            const ab = ABILITIES[attackKey];
-            if (ab.targetType === "area") {
-                // El punto de impacto es la casilla del blanco. No evita
-                // autolastimarse a propósito (según lo acordado); eso se
-                // resolverá más adelante con resistencia al fuego.
-                await performAreaAttack(u, p.pos, attackKey);
+            if (ABILITIES[choice.key].targetType === "area") {
+                await performAreaAttack(u, choice.impact, choice.key);
             } else {
-                await performAttack(u, p, attackKey);
+                await performAttack(u, choice.target, choice.key);
             }
             if (state.gameOver) break;
             continue;
@@ -2415,6 +2569,7 @@ function startPlayerTurn() {
     state.busy = false;
     if (state.gameOver) return;
     const u = state.player;
+    checkPassives(u); // antes de sumar PA/PM: los bonus dependen de las pasivas activas
     u.move = Math.max(0, u.maxMove + effectiveResourceBonus(u, "move") + (u.moveBonusPending || 0) - (u.moveDrainPending || 0));
     u.ap = Math.max(0, u.maxAp + effectiveResourceBonus(u, "ap") + (u.apBonusPending || 0) - (u.apDrainPending || 0));
     u.apBonusPending = 0;
@@ -2435,7 +2590,8 @@ function startPlayerTurn() {
         if (ABILITIES[key].cooldown && u.cooldowns[key] > 0) u.cooldowns[key]--;
     });
     state.turn = "player";
-    addLog("Turno del jugador.", "turn");
+    // Caído: render() pasa el turno solo (ver passTurnIfPlayerDown).
+    addLog(u.hp > 0 ? "Turno del jugador." : "El jugador está caído y pasa su turno.", "turn");
     render();
 }
 
@@ -2491,6 +2647,22 @@ function render() {
     renderHand();
     renderLog();
     document.getElementById("endTurnBtn").disabled = (state.turn !== "player" || state.gameOver || state.busy);
+    passTurnIfPlayerDown();
+}
+
+// Si el jugador cayó (y el compañero sigue en pie), su turno se pasa solo
+// en cuanto termina lo que estuviera haciendo (state.busy en false).
+// Sirve tanto si cae en su propio turno (trampa, contraataque) como al
+// arrancar un turno nuevo ya caído.
+let passingTurn = false;
+function passTurnIfPlayerDown() {
+    if (passingTurn || !state || state.gameOver || state.busy) return;
+    if (state.turn !== "player" || state.player.hp > 0) return;
+    passingTurn = true;
+    setTimeout(() => {
+        passingTurn = false;
+        endPlayerTurn();
+    }, 500);
 }
 
 function renderBoard() {
@@ -2572,6 +2744,7 @@ function renderSide() {
     document.getElementById("playerMvText").textContent = `${p.move}/${p.maxMove}`;
     document.getElementById("playerApBar").style.width = (p.ap / p.maxAp * 100) + "%";
     document.getElementById("playerApText").textContent = `${p.ap}/${p.maxAp}`;
+    renderCompanionCard();
 
     // La lista de enemigos de arriba se sacó del layout (el HP ahora va en
     // el nameplate de cada ficha). Si el contenedor no existe, no se dibuja.
@@ -2588,6 +2761,32 @@ function renderSide() {
     `;
         container.appendChild(card);
     });
+}
+
+// Tarjeta del compañero debajo de la del jugador (se crea por JS para no
+// tocar combate_tactico.html). Solo vida: lo maneja la IA.
+function renderCompanionCard() {
+    const c = companionUnit();
+    let card = document.getElementById("companionCard");
+    if (!c) { card?.remove(); return; }
+    if (!card) {
+        card = document.createElement("div");
+        card.id = "companionCard";
+        card.className = "unit-card player";
+        card.innerHTML = `
+            <h3 id="companionName"></h3>
+            <div class="bar-row"><span>HP</span>
+              <div class="bar-track"><div class="bar-fill hp-fill" id="companionHpBar"></div></div>
+              <span id="companionHpText"></span>
+            </div>`;
+        document.getElementById("playerCard").insertAdjacentElement("afterend", card);
+    }
+    const hp = Math.max(0, c.hp);
+    card.classList.toggle("dead", hp <= 0);
+    card.classList.toggle("active-turn", state.actingUnit === c);
+    card.querySelector("#companionName").textContent = hp > 0 ? `${c.label} (compañero)` : `${c.label} (caído)`;
+    card.querySelector("#companionHpBar").style.width = (hp / c.maxHp * 100) + "%";
+    card.querySelector("#companionHpText").textContent = `${hp}/${c.maxHp}` + (c.shield > 0 ? ` (+${c.shield})` : "");
 }
 
 // Números que muestran la carta y el tooltip: fórmulas de ability-text.js
@@ -2675,6 +2874,13 @@ function showOverlay(playerWon, goldGained, xpGained, leveledUp, level) {
     if (playerWon && goldGained !== undefined) {
         const levelText = leveledUp ? ` ¡Subiste a nivel ${level}!` : "";
         overlaySubtitle.textContent = `Ganaste ${goldGained} de oro${xpGained > 0 ? ` y ${xpGained} de XP` : ""}.${levelText}`;
+        overlaySubtitle.style.display = "";
+    } else if (!playerWon && (currentProgress?.gold || 0) > 0) {
+        // Al morir se pierde la mitad del oro de la corrida (ver 'reset' en
+        // progress-action: se lleva ceil(oro / 2) al banco).
+        const runGold = currentProgress.gold;
+        const kept = Math.ceil(runGold / 2);
+        overlaySubtitle.textContent = `Perdiste ${runGold - kept} de oro de esta corrida. Te llevás ${kept}.`;
         overlaySubtitle.style.display = "";
     } else {
         overlaySubtitle.textContent = "";

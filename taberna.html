@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Taberna — Combate Táctico</title>
+  <link rel="stylesheet" href="css/battle.css?ver=2026.10.05a">
+  <link rel="stylesheet" href="css/laberinto.css?ver=2026.10.05a">
+  <link rel="stylesheet" href="css/ciudad.css?ver=2026.10.05b">
+  <link rel="stylesheet" href="css/taberna.css?ver=2026.10.21a">
+  <script type="module" src="js/taberna.js?ver=2026.10.21a"></script>
+</head>
+<body class="laberinto-body">
+  <div class="ciudad-page">
+
+    <header class="ciudad-header">
+      <h1 class="ciudad-title">Taberna</h1>
+      <div class="ciudad-header-right">
+        <div class="ciudad-gold" id="goldLabel">Oro: 0</div>
+        <button type="button" class="ciudad-nav-btn ciudad-nav-btn--ghost" id="backBtn">Volver a la ciudad</button>
+      </div>
+    </header>
+
+    <p class="taberna-intro">Exploradores dispuestos a acompañarte en tu próxima corrida. Cobran lo que vale su experiencia y pelean a tu lado hasta que salgas del laberinto o caigan. La lista cambia cada vez que volvés a la ciudad.</p>
+
+    <!-- Interruptor: si te pueden contratar a vos (ver taberna.js) -->
+    <div class="taberna-card taberna-hireable">
+      <div>
+        <div class="taberna-label">Disponible como compañero</div>
+        <div class="taberna-hint">Si está prendido, otros exploradores te pueden contratar. Te llevás el 80% de lo que paguen.</div>
+      </div>
+      <button type="button" class="taberna-switch" id="hireableSwitch" role="switch" aria-checked="true">
+        <span class="taberna-switch-track"><span class="taberna-switch-thumb"></span></span>
+        <span class="taberna-switch-label">Prendido</span>
+      </button>
+    </div>
+
+    <!-- Compañero contratado para esta corrida (si hay) -->
+    <div id="currentCompanion"></div>
+
+    <div class="taberna-status" id="tabernaStatus">Cargando…</div>
+    <div class="taberna-list" id="offersList"></div>
+
+  </div>
+</body>
+</html>

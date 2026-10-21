@@ -7,7 +7,7 @@
   <link rel="stylesheet" href="css/battle.css?ver=2026.10.05a">
   <link rel="stylesheet" href="css/laberinto.css?ver=2026.10.05a">
   <link rel="stylesheet" href="css/ciudad.css?ver=2026.10.05b">
-  <script type="module" src="js/ciudad.js?ver=2026.10.09a"></script>
+  <script type="module" src="js/ciudad.js?ver=2026.10.21a"></script>
   <script type="module" src="js/ciudad-ayuda.js?ver=2026.10.05a"></script>
   <script type="module" src="js/ciudad-tablon.js?ver=2026.10.05a"></script>
 </head>
@@ -43,6 +43,7 @@
           <button type="button" class="ciudad-nav-btn" id="goToAlquimistaBtn">Alquimista</button>
           <button type="button" class="ciudad-nav-btn" id="goToHabilidadesBtn">Habilidades</button>
           <button type="button" class="ciudad-nav-btn" id="goToBestiarioBtn">Bestiario</button>
+          <button type="button" class="ciudad-nav-btn" id="goToTabernaBtn">Taberna</button>
           <button type="button" class="ciudad-nav-btn ciudad-nav-btn--primary" id="goToLaberintoBtn">Ir al laberinto</button>
           <button type="button" class="ciudad-nav-btn ciudad-nav-btn--ghost" id="logoutBtn">Cerrar sesión</button>
         </nav>
@@ -157,7 +158,7 @@
        vuelve a aparecer el "Nuevo" en el tablón. data-title es lo
        que se ve en la tarjeta del tablón.
        ============================================================ -->
-  <div class="help-overlay" id="patchOverlay" data-version="2026-10-15a" data-title="Parche del 15 de octubre">
+  <div class="help-overlay" id="patchOverlay" data-version="2026-10-21a" data-title="Parche del 21 de octubre">
     <div class="help-dialog" role="dialog" aria-modal="true" aria-labelledby="patchTitle">
       <div class="help-dialog-header">
         <h2 id="patchTitle">Notas del parche</h2>
@@ -165,21 +166,28 @@
       </div>
 
       <div class="help-dialog-body">
-        <p class="patch-date">15 de octubre</p>
-        <p>Una energía antigua se agitó en las profundidades y las puertas del <strong>nivel 5</strong> del laberinto se abrieron por fin.</p>
+        <p class="patch-date">21 de octubre</p>
+        <p>Abre sus puertas la Taberna, el descanso rinde más a medida que crecés, los niveles que ya dominás se pueden arrasar y el oro del laberinto ahora se gana de verdad al volver.</p>
+
+        <h3>Taberna</h3>
+        <ul class="patch-list">
+          <li><strong>Compañeros</strong>: en la Taberna de la ciudad vas a encontrar a otros exploradores dispuestos a acompañarte en tu próxima corrida. Cada vez que volvés del laberinto aparecen cinco nuevos, de tu nivel o menos.</li>
+          <li><strong>El precio</strong>: cobran lo que vale su experiencia, y el 80% de lo que pagues le llega al explorador que contrataste.</li>
+          <li><strong>Estilo de juego</strong>: al contratar elegís cómo pelea: agresivo, asesino, guardián, tirador o médico.</li>
+          <li><strong>En el laberinto</strong>: tu compañero arrastra su vida de un combate a otro y descansa con vos. Si cae, no vuelve hasta tu próxima corrida.</li>
+          <li><strong>Juntos hasta el final</strong>: solo perdés el combate si caen los dos. Si caés vos y tu compañero gana, seguís la corrida con 1 de vida.</li>
+          <li><strong>¿No querés que te contraten?</strong> Podés apagar "Disponible como compañero" desde la Taberna.</li>
+        </ul>
 
         <h3>Laberinto</h3>
         <ul class="patch-list">
-          <li>Aparecen criaturas nuevas por descubrir en el bestiario.</li>
-          <li>Más de 25 habilidades nuevas y algunas pasivas por descubrir.</li>
+          <li><strong>Descanso</strong>: la regeneración ahora tiene en cuenta tu nivel. Cuanto más alto, más vida recuperás al descansar y entre combate y combate.</li>
+          <li><strong>Pasivas</strong>: las pasivas que dependen de tu vida, como Furia de Sangre o Última Resistencia, ya se activan desde el primer turno si entrás al combate herido.</li>
+          <li><strong>Arrasar</strong>: si ya superaste de sobra un nivel del laberinto, podés ganar los caminos sin pelear. Desde el nivel 4, los caminos de los niveles más bajos que el tuyo menos dos muestran el botón "Arrasar". Te llevás el oro, pasa una hora y seguís a la sala siguiente, sin experiencia ni almas. Solo se pueden arrasar los caminos donde ya conocés a todas las criaturas, y las grietas nunca.</li>
+          <li><strong>El oro de la corrida</strong>: el oro que ganás en el laberinto ahora viaja con vos y recién llega al banco cuando volvés a la ciudad. Si caés en combate, perdés la mitad. ¡Pensá bien cuándo volver!</li>
         </ul>
 
-        <h3>Rumores</h3>
-        <ul class="patch-list">
-          <li>Se dice que energías extrañas están alterando de a poco el nivel 2 del laberinto. Todavía nadie encontró nada, pero puede que pronto algo nuevo se deje ver…</li>
-        </ul>
-
-        <p class="help-farewell">¡Nos vemos en el laberinto!</p>
+        <p class="help-farewell">¡Nos vemos en la Taberna!</p>
       </div>
 
       <div class="help-dialog-footer">

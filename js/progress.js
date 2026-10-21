@@ -25,7 +25,7 @@ async function callProgressAction(action, extra = {}) {
 // gratis. laberinto.js lo cachea para poder estimar HP/horas de forma
 // optimista en el cliente sin pegarle al server por cada "Descansar".
 export async function getProgress() {
-    const { progress, heal_per_hour, max_hp, killed_types, rift, available_rift, error } = await callProgressAction("get");
+    const { progress, heal_per_hour, max_hp, killed_types, rift, available_rift, companion, raze_max_level, error } = await callProgressAction("get");
     if (error) throw new Error(error);
     // killedTypes: tipos de criatura que ya te dieron XP (ver
     // character_killed_types). El laberinto lo usa para que las tarjetas
@@ -38,7 +38,24 @@ export async function getProgress() {
         maxHp: max_hp,
         killedTypes: killed_types || [],
         rift: rift || null,
-        availableRift: available_rift || null
+        availableRift: available_rift || null,
+        // Compañero contratado en la Taberna (o null): nombre, nivel, ícono,
+        // estilo, stats, habilidades, pasivas, hp, max_hp, heal_per_hour.
+        // hp 0 = murió en esta corrida.
+        companion: companion || null,
+        // Hasta qué nivel del laberinto se puede arrasar (0 = ninguno).
+        razeMaxLevel: raze_max_level || 0
+    };
+}
+
+// Arrasar un camino: ganarlo sin pelear (oro, sin XP ni alma), pasa 1
+// hora y avanza a la sala siguiente. El servidor valida todo.
+export async function raze(enemyKeys) {
+    const { progress, gold_gained, heal_per_hour, max_hp, companion, error } = await callProgressAction("raze", { enemies: enemyKeys });
+    if (error) throw new Error(error);
+    return {
+        progress: { ...progress, healPerHour: heal_per_hour, maxHp: max_hp, companion: companion || null },
+        goldGained: gold_gained
     };
 }
 
@@ -47,9 +64,9 @@ export async function getProgress() {
 // Esta es la versión "de verdad" — laberinto.js la llama poco (solo
 // en los checkpoints), no en cada click de "Descansar".
 export async function rest(hours) {
-    const { progress, heal_per_hour, max_hp, error } = await callProgressAction("rest", { hours });
+    const { progress, heal_per_hour, max_hp, companion, error } = await callProgressAction("rest", { hours });
     if (error) throw new Error(error);
-    return { ...progress, healPerHour: heal_per_hour, maxHp: max_hp };
+    return { ...progress, healPerHour: heal_per_hour, maxHp: max_hp, companion: companion || null };
 }
 
 // Versión "dispará y olvidate" de rest(), pensada para el evento
@@ -92,11 +109,16 @@ export function restBeacon(hours) {
 // de combate. Devuelve el progreso actualizado + cuánto oro y XP se
 // ganó (xpGained: XP permanente, solo cuenta la primera vez que se
 // mata cada tipo de criatura — ver progress-action.ts).
-export async function finishCombat(defeatedKeys, hp) {
-    const { progress, gold_gained, xp_gained, heal_per_hour, level, leveled_up, max_hp, error } = await callProgressAction("finish-combat", { defeated: defeatedKeys, hp });
+// companionHp: vida con la que terminó el compañero (0 si murió). Si no
+// hay compañero, no se manda y el servidor no toca nada.
+// hp 0 del jugador = cayó pero el compañero ganó: sigue con 1 de vida.
+export async function finishCombat(defeatedKeys, hp, companionHp = null) {
+    const extra = { defeated: defeatedKeys, hp };
+    if (companionHp != null) extra.companion_hp = companionHp;
+    const { progress, gold_gained, xp_gained, heal_per_hour, level, leveled_up, max_hp, companion, error } = await callProgressAction("finish-combat", extra);
     if (error) throw new Error(error);
     return {
-        progress: { ...progress, healPerHour: heal_per_hour, maxHp: max_hp },
+        progress: { ...progress, healPerHour: heal_per_hour, maxHp: max_hp, companion: companion || null },
         goldGained: gold_gained,
         xpGained: xp_gained,
         level,
@@ -121,9 +143,9 @@ export async function enterRift(riftKey) {
 }
 
 export async function advanceLevel() {
-    const { progress, heal_per_hour, max_hp, error } = await callProgressAction("advance-level");
+    const { progress, heal_per_hour, max_hp, companion, error } = await callProgressAction("advance-level");
     if (error) throw new Error(error);
-    return { ...progress, healPerHour: heal_per_hour, maxHp: max_hp };
+    return { ...progress, healPerHour: heal_per_hour, maxHp: max_hp, companion: companion || null };
 }
 
 // outcome: "exit" (salida normal del laberinto) | "defeat" (derrota

@@ -740,9 +740,12 @@ export const ABILITIES = {
     // ---------- Grieta: Guarida del Rey Goblin ----------
     // Goblin King. Área de radio 2 que lastima a TODOS los que agarra,
     // también a sus goblins (sin opponentsOnly). Usa los stats de Trampa.
+    // aiIgnoresAllies: la IA la tira aunque agarre a sus aliados (sí evita
+    // agarrarse a sí mismo). Ver attackOptionsOf en battle.js.
     fireBomb: {
         name: "Bomba de Fuego", range: 3, apCost: 3, cooldown: 4, needsTarget: true, targetType: "area",
         aoeRadius: 2,
+        aiIgnoresAllies: true,
         damageStats: ["Ingenio", "Inteligencia", "Paciencia", "Suerte"],
         damageMultiplier: 3.2,
         damageType: "fuego",

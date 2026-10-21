@@ -1,6 +1,6 @@
 import { ENEMY_TYPES } from "./enemies.js";
 import { generateEncounter } from "./encounter.js";
-import { getProgress, rest as restProgress, resetProgress, restBeacon, advanceLevel, enterRift } from "./progress.js";
+import { getProgress, rest as restProgress, resetProgress, restBeacon, advanceLevel, enterRift, raze as razeProgress } from "./progress.js";
 import { requireSession } from "./session.js";
 import { getBank } from "./citybank.js";
 import { ICON_COINS, ICON_HOURGLASS } from "./icons.js";
@@ -62,6 +62,88 @@ let bankGold = 0;
 // con getProgress). Se lee una vez al entrar: las muertes nuevas pasan en
 // la página de combate y al volver se vuelve a pedir.
 let killedTypes = new Set();
+
+// ---------- Arrasar ----------
+// Hasta qué nivel del laberinto puede arrasar el personaje (lo manda el
+// servidor en 'get': desde nivel 4, nivel − 2). Se lee una vez al entrar.
+let razeMaxLevel = 0;
+
+(function injectRazeStyle() {
+    const style = document.createElement("style");
+    style.textContent = `
+        .raze-btn {
+            display: inline-block; margin-top: 8px; padding: 5px 10px;
+            border: 1px solid var(--amber, #c99a4a); border-radius: 5px;
+            color: var(--amber, #c99a4a); font-family: var(--mono, sans-serif);
+            font-size: 11px; letter-spacing: 0.5px; text-transform: uppercase;
+            cursor: pointer; background: rgba(201, 154, 74, 0.08);
+        }
+        .raze-btn:hover, .raze-btn:focus-visible { background: rgba(201, 154, 74, 0.2); outline: none; }
+        .raze-note { font-size: 12px; color: var(--amber, #c99a4a); text-align: center; margin: 6px 0; min-height: 1em; }
+    `;
+    document.head.appendChild(style);
+})();
+
+// Los JSON de creature_types pueden llegar como texto.
+function asJson(v, fallback) {
+    if (v == null) return fallback;
+    if (typeof v === "string") { try { return JSON.parse(v); } catch { return fallback; } }
+    return v;
+}
+
+// Misma regla que 'raze' en progress-action: nivel al alcance, fuera de
+// grietas, todas las criaturas de este nivel y ya matadas (los bandidos no
+// dan XP: no cuentan para eso).
+function canRaze(encounter) {
+    if (currentProgress?.rift) return false;
+    const level = currentProgress?.laberinto_level || 1;
+    if (level > razeMaxLevel) return false;
+    return encounter.every(key => {
+        const cfg = ENEMY_TYPES[key];
+        if (!cfg) return false;
+        const vis = asJson(cfg.levelVisibility ?? cfg.level_visibility, {}) || {};
+        if (!vis[String(level)]) return false;
+        return cfg.family === "bandidos" || killedTypes.has(key);
+    });
+}
+
+function setRazeNote(text) {
+    let note = document.getElementById("razeNote");
+    if (!note) {
+        note = document.createElement("div");
+        note.id = "razeNote";
+        note.className = "raze-note";
+        document.getElementById("pathsList").insertAdjacentElement("beforebegin", note);
+    }
+    note.textContent = text || "";
+}
+
+let razing = false;
+async function razePath(encounter, title) {
+    if (razing) return;
+    razing = true;
+    try {
+        await flushRest();
+        const { progress, goldGained } = await razeProgress(encounter);
+        // El oro queda en la corrida (progress.gold): ya viene en progress.
+        currentProgress = { ...currentProgress, ...progress };
+        updateRoomLabel(currentProgress.room);
+        updateHoursLabel(currentProgress.hours_remaining);
+        updatePlayerStats(currentProgress);
+        setRazeNote(`Arrasaste el ${title}: +${goldGained} de oro.`);
+        if (currentProgress.hours_remaining <= 0) {
+            showLaberintoClosed();
+        } else {
+            const count = pathCountFor(currentProgress.room, currentProgress.laberinto_level);
+            paths = buildPaths(count, currentProgress.room, currentProgress.laberinto_level);
+            render();
+        }
+    } catch (err) {
+        alert(err.message || "No se pudo arrasar el camino.");
+    } finally {
+        razing = false;
+    }
+}
 
 // Misma cuenta que finish-combat en progress-action.ts:
 // - XP: una sola vez por TIPO y solo si nunca lo mataste; bandidos nunca dan.
@@ -168,12 +250,28 @@ function updatePlayerStats(progress) {
     if (hpText) hpText.textContent = `${progress.hp}/${maxHp}`;
     const goldText = document.getElementById("playerGoldText");
     if (goldText) goldText.innerHTML = `${bankGold + (progress.gold || 0)} ${ICON_COINS}`;
+    updateCompanionStats(progress.companion);
+}
+
+// Tarjeta del compañero de la Taberna (oculta si no hay).
+function updateCompanionStats(comp) {
+    const card = document.getElementById("companionStatsCard");
+    if (!card) return;
+    // style.display y no el atributo hidden: los estilos de .unit-card le ganan a hidden.
+    card.style.display = comp ? "" : "none";
+    if (!comp) return;
+    const hp = Math.max(0, comp.hp);
+    document.getElementById("companionName").textContent = hp > 0 ? `${comp.name} (compañero)` : `${comp.name} (caído)`;
+    document.getElementById("companionHpBar").style.width = (hp / comp.max_hp * 100) + "%";
+    document.getElementById("companionHpText").textContent = `${hp}/${comp.max_hp}`;
+    card.classList.toggle("dead", hp <= 0);
 }
 
 async function rollNewLaberinto() {
     const [progress, bank] = await Promise.all([getProgress(), getBank()]);
     currentProgress = progress;
     killedTypes = new Set(progress.killedTypes || []);
+    razeMaxLevel = progress.razeMaxLevel || 0;
     bankGold = bank?.gold ?? 0;
     updateRoomLabel(currentProgress.room);
     updateHoursLabel(currentProgress.hours_remaining);
@@ -221,6 +319,13 @@ async function rest() {
         currentProgress.healPerHour,
         currentProgress.maxHp
     );
+    // El compañero descansa las mismas horas, con su propia cura (misma
+    // cuenta que 'rest' en progress-action). Si murió, no vuelve.
+    const hoursSpent = currentProgress.hours_remaining - hoursRemaining;
+    const comp = currentProgress.companion;
+    if (comp && comp.hp > 0 && hoursSpent > 0) {
+        comp.hp = applyHoursLocal(comp.hp, hoursSpent, hoursSpent, comp.heal_per_hour, comp.max_hp).hp;
+    }
     currentProgress.hp = hp;
     currentProgress.hours_remaining = hoursRemaining;
     updateHoursLabel(hoursRemaining);
@@ -374,10 +479,25 @@ function render() {
 
         card.className = "path-card";
         const encounter = path.enemies;
+        const title = `Camino ${i + 1}`;
         // XP solo de lo que todavía te da XP; oro siempre. La línea de
         // nombres solo se ve en el celular (ver laberinto2.css).
-        card.innerHTML = encounterCardHtml(`Camino ${i + 1}`, encounter);
+        card.innerHTML = encounterCardHtml(title, encounter);
         card.addEventListener("click", () => chooseTrail(encounter));
+        // Arrasar: no es un <button> porque la tarjeta ya es uno (no se
+        // pueden anidar). Se maneja con click y con Enter/Espacio.
+        if (canRaze(encounter)) {
+            const btn = document.createElement("span");
+            btn.className = "raze-btn";
+            btn.setAttribute("role", "button");
+            btn.tabIndex = 0;
+            btn.textContent = "Arrasar";
+            btn.title = "Ganás el oro sin pelear (sin XP ni alma). Pasa 1 hora.";
+            const go = e => { e.stopPropagation(); e.preventDefault(); razePath(encounter, title); };
+            btn.addEventListener("click", go);
+            btn.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") go(e); });
+            card.appendChild(btn);
+        }
         container.appendChild(card);
     });
 }
