@@ -282,11 +282,19 @@ const DAMAGE_TYPE_TEXT = {
 // applyEndOfTurnDamage, passiveReductionOf, applyLowHpHealIfAny,
 // applyOnHitPassivesIfAny). Usa los stats base: en combate pueden
 // variar si otra pasiva o un buff los sube. Sin getStat, la fórmula.
-export function passiveLines(pas, getStat = null) {
+// level: nivel con el que se calculan las curas por Regeneración (el del
+// personaje, o el nivel del laberinto de la criatura). Sin getStat, la
+// fórmula dice "× nivel".
+export function passiveLines(pas, getStat = null, level = 1) {
     const L = [];
     if (!pas) return L;
 
     // max(1, floor(stat / divisor)), como en battle.js.
+    // Curas por Regeneración: max(1, floor(stat × nivel / divisor)).
+    const healPerStat = (stat, divisor) => getStat
+        ? String(Math.max(1, Math.floor(getStat(stat) * level / divisor)))
+        : `${stat} × nivel ÷ ${divisor} (mínimo 1)`;
+
     const perStat = (stat, divisor) => getStat
         ? String(Math.max(1, Math.floor(getStat(stat) / divisor)))
         : `${stat} ÷ ${divisor} (mínimo 1)`;
@@ -317,7 +325,7 @@ export function passiveLines(pas, getStat = null) {
     if (pas.endOfTurnRegen) {
         const r = pas.endOfTurnRegen;
         const res = r.resource === "move" ? "PM" : "PA";
-        L.push(cap(`${when}al final de su turno se cura ${perStat(r.stat, r.divisor)} por cada ${res} que no usó`));
+        L.push(cap(`${when}al final de su turno se cura ${healPerStat(r.stat, r.divisor)} por cada ${res} que no usó`));
     }
 
     if (pas.endOfTurnDamage) {
@@ -355,7 +363,7 @@ export function passiveLines(pas, getStat = null) {
 
     if (pas.lowHpHeal) {
         const h = pas.lowHpHeal;
-        L.push(`Si un golpe lo deja por debajo del ${pct(h.threshold)}% de vida sin matarlo, se cura ${perStat(h.stat, h.divisor)}`);
+        L.push(`Si un golpe lo deja por debajo del ${pct(h.threshold)}% de vida sin matarlo, se cura ${healPerStat(h.stat, h.divisor)}`);
     }
 
     // max(1, floor(promedio × multiplicador)).

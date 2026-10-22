@@ -6,6 +6,13 @@
 // una pasiva se toca solo este archivo.
 // ============================================================
 
+// Curas por Regeneración (endOfTurnRegen, lowHpHeal) — 22/10/2026:
+//   cura = max(1, floor(Regeneración × nivel ÷ divisor))
+// nivel: el del personaje (jugador y compañero) o el nivel del laberinto
+// donde aparece la criatura (ver unitLevel en battle.js). Los divisores se
+// eligieron para que las criaturas que las tienen curen lo mismo que antes
+// (el Ice Trol cura 5 por PM en lugar de 4). endOfTurnDamage (En Agonía)
+// NO escala con el nivel.
 export const PASSIVES = {
     furiaSangre: {
         name: "Furia de Sangre",
@@ -26,7 +33,7 @@ export const PASSIVES = {
     frostRegen: {
         name: "Regeneración Gélida",
         hpThreshold: 0.5,
-        endOfTurnRegen: { stat: "Regeneración", divisor: 20 },
+        endOfTurnRegen: { stat: "Regeneración", divisor: 12 },
         aiStyleOverride: "elusive"
     },
     thickSkin: {
@@ -59,7 +66,7 @@ export const PASSIVES = {
         elusiveness: 0.05
     },
     // Sand Statue. Al recibir daño real y quedar viva por debajo del 30%,
-    // se cura en ese mismo golpe max(1, floor(Regeneración / 5)). Si el
+    // se cura en ese mismo golpe max(1, floor(Regeneración × nivel / 15)). Si el
     // golpe la mata, no se cura. Ver applyLowHpHealIfAny.
     // Swarm. +1 PM siempre (hpThreshold 1 = siempre activa). Como toda
     // pasiva, pasa al jugador con el alma.
@@ -69,16 +76,16 @@ export const PASSIVES = {
         resourceBoosts: { move: 1 }
     },
     // Cave Trol. Por debajo del 75% de vida, al final de su turno se cura
-    // max(1, floor(Regeneración / 4)) por cada PM que le quedó sin usar.
+    // max(1, floor(Regeneración × nivel / 12)) por cada PM que le quedó sin usar.
     // Como toda pasiva, pasa al jugador con el alma.
     trollRegen: {
         name: "Regeneración de Trol",
         hpThreshold: 0.75,
-        endOfTurnRegen: { stat: "Regeneración", divisor: 4, resource: "move" }
+        endOfTurnRegen: { stat: "Regeneración", divisor: 12, resource: "move" }
     },
     hardToKill: {
         name: "Duro de Matar",
-        lowHpHeal: { threshold: 0.3, stat: "Regeneración", divisor: 5 }
+        lowHpHeal: { threshold: 0.3, stat: "Regeneración", divisor: 15 }
     },
     corrosiveBlood: {
         name: "Sangre Corrosiva",

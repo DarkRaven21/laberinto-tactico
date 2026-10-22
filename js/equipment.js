@@ -44,10 +44,44 @@ export function isItemForLevel(item, level) {
     return level >= min && (max === null || level <= max);
 }
 
+// ¿Se puede comprar a este nivel? Cualquier ítem de tu nivel o menor
+// (min_level <= nivel): max_level ya no frena la compra, solo ordena la
+// Armería en pestañas. Misma regla que validan item-connect e item-replace.
+export function canBuyAtLevel(item, level) {
+    return level >= (item.min_level ?? 1);
+}
+
+// ¿Es un ítem especial? (necesita un objeto de familia para crearse).
+export function isSpecialItem(item) {
+    return !!item.requires_material;
+}
+
 // ¿El item es NUEVO para este nivel? (aparece justo en este nivel). En
-// nivel 1 no se marca nada: ahí todo es nuevo y sería ruido.
+// nivel 1 no se marca nada: ahí todo es nuevo y sería ruido. Los
+// especiales no cuentan: dependen de tener el objeto, no del nivel.
 export function isItemNewForLevel(item, level) {
-    return level > 1 && (item.min_level ?? 1) === level;
+    return level > 1 && !isSpecialItem(item) && (item.min_level ?? 1) === level;
+}
+
+// ---------- Objetos de familia (Especiales) ----------
+// Catálogo: qué familias dejan objeto y cómo se llama. Cambia muy poco:
+// se pide una vez por página.
+export async function getMaterialCatalog() {
+    const res = await supabaseFetch("/rest/v1/materials?select=family,label");
+    const rows = await res.json();
+    return Array.isArray(rows) ? rows : [];
+}
+
+// Objetos que tiene el personaje como { family: cantidad } (solo los > 0).
+export async function getMaterials() {
+    const session = getSession();
+    const res = await supabaseFetch(
+        `/rest/v1/character_materials?character_id=eq.${session.id}&amount=gt.0&select=family,amount`
+    );
+    const rows = await res.json();
+    const byFamily = {};
+    if (Array.isArray(rows)) for (const r of rows) byFamily[r.family] = r.amount;
+    return byFamily;
 }
 
 // ---------- Aviso de novedades en la armería ----------

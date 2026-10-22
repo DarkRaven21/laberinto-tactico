@@ -177,10 +177,12 @@ function abilityBlock(ab, getStat) {
     return block;
 }
 
-function passiveBlock(pas, key, getStat) {
+// level: nivel del laberinto de esta sección (las curas por Regeneración
+// escalan con él, igual que en el combate).
+function passiveBlock(pas, key, getStat, level) {
     const block = el("div", "bst-passive");
     block.appendChild(el("div", "bst-ability-name", pas?.name || key));
-    const lines = passiveLines(pas, getStat);
+    const lines = passiveLines(pas, getStat, level);
     if (lines.length) {
         const box = el("div", "bst-passive-lines");
         lines.forEach(t => box.appendChild(el("div", null, t)));
@@ -189,7 +191,7 @@ function passiveBlock(pas, key, getStat) {
     return block;
 }
 
-function renderCard(key, { hidden = false } = {}) {
+function renderCard(key, { hidden = false, level = 1 } = {}) {
     const c = ENEMY_TYPES[key];
     const known = killed.has(key);
 
@@ -221,16 +223,16 @@ function renderCard(key, { hidden = false } = {}) {
     if (passives.length) {
         const sec = el("div", "bst-section");
         sec.appendChild(el("div", "bst-section-title", "Pasivas"));
-        passives.forEach(k => sec.appendChild(passiveBlock(PASSIVES[k], k, getStat)));
+        passives.forEach(k => sec.appendChild(passiveBlock(PASSIVES[k], k, getStat, level)));
         card.appendChild(sec);
     }
 
     return card;
 }
 
-function cardGrid(entries) {
+function cardGrid(entries, level = 1) {
     const grid = el("div", "armeria-item-list bst-grid");
-    entries.forEach(({ key, hidden }) => grid.appendChild(renderCard(key, { hidden })));
+    entries.forEach(({ key, hidden }) => grid.appendChild(renderCard(key, { hidden, level })));
     return grid;
 }
 
@@ -251,7 +253,7 @@ function renderLevel(level, biomes) {
                 .forEach(fam => {
                     const famEl = el("div", "bst-family");
                     famEl.appendChild(el("h4", "bst-family-title", familyName(fam)));
-                    famEl.appendChild(cardGrid(sortCreatures(fams.get(fam))));
+                    famEl.appendChild(cardGrid(sortCreatures(fams.get(fam)), level));
                     biomeEl.appendChild(famEl);
                 });
 
@@ -267,6 +269,7 @@ function renderRifts(noLevel) {
         .map(r => ({
             name: r.name,
             sub: r.level ? `Nivel ${r.level}` : null,
+            level: r.level || 1,
             keys: r.creatures.filter(k => ENEMY_TYPES[k])
         }))
         .filter(g => g.keys.length);
@@ -283,7 +286,7 @@ function renderRifts(noLevel) {
         const title = el("h3", "bst-biome-title", g.name);
         if (g.sub) title.appendChild(el("span", "bst-biome-sub", ` · ${g.sub}`));
         riftEl.appendChild(title);
-        riftEl.appendChild(cardGrid(sortCreatures(g.keys.map(key => ({ key, hidden: false })))));
+        riftEl.appendChild(cardGrid(sortCreatures(g.keys.map(key => ({ key, hidden: false }))), g.level || 1));
         section.appendChild(riftEl);
     });
 

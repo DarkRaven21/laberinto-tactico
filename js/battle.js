@@ -52,6 +52,23 @@ const COMPANION_AI_STYLE = {
 const COMPANION_MOVE = 3;
 const COMPANION_AP = 3;
 
+// Nivel de una unidad, para las curas por Regeneración (ver passives.js):
+// el jugador, su nivel; el compañero, el suyo; una criatura, el nivel del
+// laberinto donde aparece (el más bajo de su level_visibility). Las que no
+// tienen nivel (grietas) usan el nivel del laberinto actual.
+function unitLevel(u) {
+    if (u === state.player) return PLAYER_CONFIG?.level || 1;
+    if (u.level) return u.level;
+    return currentProgress?.laberinto_level || 1;
+}
+
+function creatureLevelOf(type) {
+    let vis = ENEMY_TYPES[type]?.levelVisibility;
+    if (typeof vis === "string") { try { vis = JSON.parse(vis); } catch { vis = null; } }
+    const levels = Object.keys(vis || {}).map(Number).filter(n => Number.isFinite(n) && n > 0);
+    return levels.length ? Math.min(...levels) : null;
+}
+
 function companionUnit() {
     return state.allies.find(a => a.isCompanion) || null;
 }
@@ -275,6 +292,7 @@ function spawnSummon(caster, type, pos) {
     unit.icon = cfg.icon;
     unit.cls = cfg.family;
     unit.xp = 0;
+    unit.level = creatureLevelOf(type);
     unit.summoned = true;
     unit.summonerId = caster.id || "player";
     unit.side = side;
@@ -417,6 +435,7 @@ async function newGame() {
         unit.icon = comp.icon;
         unit.side = "player";
         unit.isCompanion = true;
+        unit.level = comp.level || 1;
         unit.xp = 0;
         const spots = playZone.filter(c => !used.has(c)).sort((a, b) => manhattan(a, pIdx) - manhattan(b, pIdx));
         if (spots.length) {
@@ -442,6 +461,7 @@ async function newGame() {
         unit.icon = cfg.icon;
         unit.cls = cfg.family;
         unit.xp = cfg.xp;
+        unit.level = creatureLevelOf(type);
 
         let pos = -1, tries = 0;
         while (tries < 400) {
@@ -1076,7 +1096,7 @@ async function applyLowHpHealIfAny(unit, dmgReceived, dodged) {
         const rule = PASSIVES[key]?.lowHpHeal;
         if (!rule) continue;
         if (unit.hp / unit.maxHp >= rule.threshold) continue;
-        const heal = Math.max(1, Math.floor(effectiveStat(unit, rule.stat) / rule.divisor));
+        const heal = Math.max(1, Math.floor(effectiveStat(unit, rule.stat) * unitLevel(unit) / rule.divisor));
         const actualHeal = Math.min(heal, unit.maxHp - unit.hp);
         if (actualHeal <= 0) continue;
         unit.hp += actualHeal;
@@ -1674,7 +1694,7 @@ async function applyEndOfTurnRegen(unit) {
         // resource: qué recurso sobrante multiplica la cura. Por defecto
         // "ap" (Regeneración Gélida); "move" para la Regeneración de Trol.
         const { stat, divisor, resource = "ap" } = p.endOfTurnRegen;
-        const perAp = Math.max(1, Math.floor(effectiveStat(unit, stat) / divisor));
+        const perAp = Math.max(1, Math.floor(effectiveStat(unit, stat) * unitLevel(unit) / divisor));
         const heal = perAp * Math.max(0, unit[resource] || 0);
         if (heal <= 0) continue;
         const before = unit.hp;
@@ -1876,7 +1896,7 @@ async function saveVictory() {
 
     victorySaved = true;
     victorySaving = false;
-    const { progress, goldGained, xpGained, level, leveledUp } = result;
+    const { progress, goldGained, xpGained, level, leveledUp, materialsFound } = result;
     // finish-combat no devuelve el estado de la grieta: se conserva el que
     // se leyó al arrancar (lo usan la probabilidad de alma y el cartel).
     currentProgress = { ...progress, rift: currentProgress.rift };
@@ -1888,6 +1908,14 @@ async function saveVictory() {
     renderLog();
 
     showOverlay(true, goldGained, xpGained, leveledUp, level);
+    // Objetos de familia (los tira el servidor): se suman al cartel.
+    if (materialsFound?.length) {
+        const names = materialsFound.map(m => m.label).join(" y ");
+        addLog(`¡Encontraste ${names}!`, "turn");
+        renderLog();
+        overlaySubtitle.textContent += ` ¡Encontraste ${names}!`;
+        overlaySubtitle.style.display = "";
+    }
     restartBtnEl.disabled = false;
 
     // Un solo tiro de 5% por combate ganado, sobre las criaturas que

@@ -115,14 +115,16 @@ export function restBeacon(hours) {
 export async function finishCombat(defeatedKeys, hp, companionHp = null) {
     const extra = { defeated: defeatedKeys, hp };
     if (companionHp != null) extra.companion_hp = companionHp;
-    const { progress, gold_gained, xp_gained, heal_per_hour, level, leveled_up, max_hp, companion, error } = await callProgressAction("finish-combat", extra);
+    const { progress, gold_gained, xp_gained, heal_per_hour, level, leveled_up, max_hp, companion, materials_found, error } = await callProgressAction("finish-combat", extra);
     if (error) throw new Error(error);
     return {
         progress: { ...progress, healPerHour: heal_per_hour, maxHp: max_hp, companion: companion || null },
         goldGained: gold_gained,
         xpGained: xp_gained,
         level,
-        leveledUp: leveled_up
+        leveledUp: leveled_up,
+        // Objetos de familia que cayeron ({ family, label }), para la Armería.
+        materialsFound: materials_found || []
     };
 }
 
