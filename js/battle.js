@@ -1,6 +1,6 @@
 import { ENEMY_TYPES } from "./enemies.js";
 import { ABILITIES } from "./abilities.js";
-import { abilityNumbers, shortLine, tooltipLine } from "./ability-text.js";
+import { abilityNumbers, applyDamageMods, shortLine, tooltipLine } from "./ability-text.js";
 import { PASSIVES } from "./passives.js";
 import { generateEncounter } from "./encounter.js";
 import { getProgress, finishCombat, advanceRoom, resetProgress } from "./progress.js";
@@ -173,6 +173,30 @@ function trapAbilitiesOf(u) {
     return u.abilities.filter(key => ABILITIES[key].targetType === "trap");
 }
 
+// La habilidad tal como la usa ESTA unidad: igual a ABILITIES[key], salvo
+// que una pasiva activa le cambie el costo o el alcance (ítems especiales):
+//   trapApDiscount: 1 → las trampas cuestan 1 PA menos (mínimo 0).
+//   summonApDiscount: 1 → las invocaciones cuestan 1 PA menos (mínimo 0).
+//   abilityRangeBonus: { disparo: 1 } → Disparo con +1 de alcance.
+//   abilityDamageTypeOverride: { hack: "electric" } → Hachazo hace daño eléctrico.
+// Si nada cambia, devuelve el mismo objeto de ABILITIES.
+function abOf(u, key) {
+    const ab = ABILITIES[key];
+    if (!u || !u.passives || !u.passivesActive || !ab) return ab;
+    let apCost = ab.apCost, range = ab.range, damageType = ab.damageType;
+    u.passives.forEach(pk => {
+        const p = PASSIVES[pk];
+        if (!p || !u.passivesActive[pk]) return;
+        if (p.trapApDiscount && ab.targetType === "trap") apCost -= p.trapApDiscount;
+        if (p.summonApDiscount && ab.summon) apCost -= p.summonApDiscount;
+        if (p.abilityRangeBonus && p.abilityRangeBonus[key]) range += p.abilityRangeBonus[key];
+        if (p.abilityDamageTypeOverride && p.abilityDamageTypeOverride[key] && ab.damageStats) damageType = p.abilityDamageTypeOverride[key];
+    });
+    apCost = Math.max(0, apCost);
+    if (apCost === ab.apCost && range === ab.range && damageType === ab.damageType) return ab;
+    return { ...ab, apCost, range, damageType };
+}
+
 function healAbilitiesOf(u) {
     return u.abilities.filter(key => ABILITIES[key].targetType === "ally" && ABILITIES[key].healStats);
 }
@@ -274,11 +298,21 @@ function summonCellFor(caster) {
 }
 
 function canSummonNow(u, key) {
-    const ab = ABILITIES[key];
+    const ab = abOf(u, key);
     if (!ENEMY_TYPES[ab.summon]) return false;
     if (u.ap < ab.apCost) return false;
     if (ab.cooldown && u.cooldowns[key] > 0) return false;
     return summonCellFor(u) !== -1;
+}
+
+function summonBonusHpOf(caster) {
+    if (!caster.passives || !caster.passivesActive) return 0;
+    let total = 0;
+    caster.passives.forEach(pk => {
+        const p = PASSIVES[pk];
+        if (p && caster.passivesActive[pk] && p.summonBonusHpStat) total += effectiveStat(caster, p.summonBonusHpStat);
+    });
+    return Math.max(0, Math.floor(total));
 }
 
 function spawnSummon(caster, type, pos) {
@@ -297,6 +331,14 @@ function spawnSummon(caster, type, pos) {
     unit.summonerId = caster.id || "player";
     unit.side = side;
     unit.pos = pos;
+    // summonBonusHpStat (Fuerza de las Arenas): la invocación sale con ese
+    // stat de quien invoca como vida máxima extra (y llena).
+    const bonusHp = summonBonusHpOf(caster);
+    if (bonusHp > 0) {
+        unit.maxHp += bonusHp;
+        unit.hp += bonusHp;
+        unit.summonBonusHp = bonusHp;
+    }
     if (side === "player") state.allies.push(unit);
     else state.enemies.push(unit);
     return unit;
@@ -346,9 +388,9 @@ function buffFallbackAbilityOf(u) {
 
 function desiredRangeOf(u) {
   const availableAttacks = attackAbilitiesOf(u).filter(key => !(ABILITIES[key].cooldown && u.cooldowns[key] > 0));
-  const attackRanges = availableAttacks.map(key => ABILITIES[key].range);
+  const attackRanges = availableAttacks.map(key => abOf(u, key).range);
   if (attackRanges.length) return Math.max(...attackRanges);
-  const trapRanges = trapAbilitiesOf(u).map(key => ABILITIES[key].range);
+  const trapRanges = trapAbilitiesOf(u).map(key => abOf(u, key).range);
   return trapRanges.length ? Math.max(...trapRanges) : 1;
 }
 
@@ -683,10 +725,48 @@ async function animateLunge(fromPos, toPos) {
 }
 
 // Resuelve un ataque completo: (carta, si es el jugador) -> empujón -> daño -> glow/número -> chequeo de victoria/derrota
+// onHitDebuffByType (Desolación): cuando quien ataca hace daño real de ese
+// tipo, el blanco pierde un % de esos stats (mismo percentDebuffs que
+// Ceguera). No se acumula: el nuevo reemplaza al que tuviera.
+function applyTypeDebuffPassives(attacker, target, ab, tgtLabel) {
+    if (!attacker.passives || !attacker.passivesActive || target.hp <= 0) return;
+    attacker.passives.forEach(pk => {
+        const p = PASSIVES[pk];
+        if (!p || !attacker.passivesActive[pk] || !p.onHitDebuffByType) return;
+        const d = p.onHitDebuffByType[ab.damageType];
+        if (!d) return;
+        const stats = {};
+        d.stats.forEach(st => { stats[st] = d.percent; });
+        target.percentDebuffs = { stats, turnsLeft: d.turns || 1 };
+        addLog(`${tgtLabel} pierde ${Math.round(d.percent * 100)}% de ${d.stats.join(", ")} en su próximo turno (${p.name}).`);
+    });
+}
+
+// onDamageTypeShield (Consumir Fuego): si el ataque hizo daño real de ese
+// tipo, quien ataca gana escudo = floor(stat ÷ divisor). Una vez por
+// ataque (aunque un área golpee a varios). Como Escudo, no se suma:
+// queda el más grande. Sin mínimo: con 0 no pasa nada.
+function applyDamageTypeShieldPassives(attacker, ab) {
+    if (!attacker.passives || !attacker.passivesActive || attacker.hp <= 0) return;
+    attacker.passives.forEach(pk => {
+        const p = PASSIVES[pk];
+        if (!p || !attacker.passivesActive[pk] || !p.onDamageTypeShield) return;
+        const cfg = p.onDamageTypeShield[ab.damageType];
+        if (!cfg) return;
+        const amount = Math.floor(effectiveStat(attacker, cfg.stat) / cfg.divisor);
+        if (amount <= 0) return;
+        const label = attacker === state.player ? "El jugador" : attacker.label;
+        if ((attacker.shield || 0) >= amount) return; // ya tiene uno igual o mayor
+        attacker.shield = amount;
+        addLog(`${label} gana un escudo de ${amount} (${p.name}).`);
+        fxAura(attacker.pos, "shield");
+    });
+}
+
 async function performAttack(attacker, target, key) {
     // Una unidad muerta no actúa (ej: la mató una trampa al caminar).
     if (attacker.hp <= 0) return;
-    const ab = ABILITIES[key];
+    const ab = abOf(attacker, key);
     attacker.ap -= ab.apCost;
     if (ab.cooldown) attacker.cooldowns[key] = ab.cooldown;
 
@@ -793,6 +873,8 @@ async function performAttack(attacker, target, key) {
         target.percentDebuffs = { stats, turnsLeft: ab.debuffPercent.turns || 1 };
         addLog(`${tgtLabel} pierde ${Math.round(ab.debuffPercent.percent * 100)}% de ${ab.debuffPercent.stats.join(" y ")} en su próximo turno.`);
     }
+    if (dmg > 0) applyTypeDebuffPassives(attacker, target, ab, tgtLabel);
+    if (dmg > 0) applyDamageTypeShieldPassives(attacker, ab);
 
     // Genérico: onHitSelfStatGain sube un stat de quien pega por el daño
     // realmente hecho, hasta el final del combate (se acumula). Corte Furioso.
@@ -824,7 +906,7 @@ async function performAttack(attacker, target, key) {
 async function performAreaAttack(attacker, impactPos, key) {
     // Una unidad muerta no actúa (ej: la mató una trampa al caminar).
     if (attacker.hp <= 0) return;
-    const ab = ABILITIES[key];
+    const ab = abOf(attacker, key);
     attacker.ap -= ab.apCost;
     if (ab.cooldown) attacker.cooldowns[key] = ab.cooldown;
 
@@ -875,7 +957,10 @@ async function performAreaAttack(attacker, impactPos, key) {
             h.victim.apDrainPending = (h.victim.apDrainPending || 0) + ab.onHitApDrain;
             addLog(`${tgtLabel} va a perder ${ab.onHitApDrain} PA en su próximo turno por ${ab.name}.`);
         }
+        applyTypeDebuffPassives(attacker, h.victim, ab, tgtLabel);
     });
+    // Una sola vez por ataque, si le hizo daño real a alguien que no sea él.
+    if (hits.some(h => h.dmg > 0 && h.victim !== attacker)) applyDamageTypeShieldPassives(attacker, ab);
 
     renderSide();
     renderLog();
@@ -1159,7 +1244,7 @@ async function applyRetaliationIfAny(defender, attacker, dodged) {
 async function placeTrap(caster, key, pos) {
     // Una unidad muerta no actúa (ej: la mató una trampa al caminar).
     if (caster.hp <= 0) return;
-    const ab = ABILITIES[key];
+    const ab = abOf(caster, key);
     caster.ap -= ab.apCost;
     if (ab.cooldown) caster.cooldowns[key] = ab.cooldown;
     const dmg = computeAbilityDamage(caster, key);
@@ -1236,8 +1321,8 @@ async function tryMovePlayerTo(target) {
 
 async function selectCard(key) {
     if (state.turn !== "player" || state.gameOver || state.busy) return;
-    const ab = ABILITIES[key];
     const u = state.player;
+    const ab = abOf(u, key);
     if (u.ap < ab.apCost) return;
     if (u.cooldowns[key] > 0) return;
 
@@ -1269,7 +1354,7 @@ async function selectCard(key) {
 async function castNoTarget(caster, key, label) {
     // Una unidad muerta no actúa (ej: la mató una trampa al caminar).
     if (caster.hp <= 0) return;
-    const ab = ABILITIES[key];
+    const ab = abOf(caster, key);
     // Invocación: si no hay lugar (o la criatura no existe), no se usa y
     // no gasta PA ni entra en CD.
     let summonCell = -1;
@@ -1287,7 +1372,8 @@ async function castNoTarget(caster, key, label) {
     let summoned = null;
     if (ab.summon) {
         summoned = spawnSummon(caster, ab.summon, summonCell);
-        addLog(`${label} usa ${ab.name} y aparece ${summoned.label}.`);
+        const extra = summoned.summonBonusHp ? ` con ${summoned.summonBonusHp} de vida extra` : "";
+        addLog(`${label} usa ${ab.name} y aparece ${summoned.label}${extra}.`);
     } else if (ab.reductionStats) {
         const reduction = computeAbilityReduction(caster, key);
         caster.defendReduction = reduction;
@@ -1367,6 +1453,7 @@ async function castNoTarget(caster, key, label) {
         });
         addLog(`${label} usa ${ab.name}: escudo de ${amount} para ${given} de ${group.length} (quien ya tenía uno igual o mayor lo conserva).`);
     }
+    applyOnCastPassives(caster, key, label);
     if (caster === state.player) {
         renderHand();
         await animateCardCast(key);
@@ -1407,8 +1494,8 @@ async function handleCellClick(i) {
 
     if (state.selection) {
         const key = state.selection.ability;
-        const ab = ABILITIES[key];
         const u = state.player;
+        const ab = abOf(u, key);
         // Segunda barrera: al elegir el objetivo se vuelve a chequear que
         // alcancen los PA y que no esté en CD. Si no, se cancela la selección.
         if (u.ap < ab.apCost || (u.cooldowns[key] || 0) > 0) {
@@ -1576,9 +1663,44 @@ function computeAbilityDamage(unit, key, target) {
     const ab = ABILITIES[key];
     const avg = averageStats(unit, ab.damageStats, target);
     const mult = ab.damageMultiplier != null ? ab.damageMultiplier : 1;
-    let dmg = Math.floor(avg * mult);
+    let dmg = applyDamageMods(Math.floor(avg * mult), abilityDamageModsOf(unit, key));
     if (unit.commandActive) dmg += unit.commandBonus;
     return Math.max(1, dmg);
+}
+
+// Pasivas activas de quien ataca que cambian el daño de UNA habilidad
+// (ítems especiales). Las cuentas están en applyDamageMods (ability-text.js),
+// así la carta y el combate dan siempre lo mismo:
+//   abilityDamageMultiplier: { slow: 2 } → Ralentizar hace el doble.
+//   damageTypeBonus: { veneno: { percent: 0.1, min: 2 } } → +10% al daño
+//   de veneno, mínimo +2.
+function abilityDamageModsOf(unit, key) {
+    const ab = abOf(unit, key);
+    const mods = { factor: 1, typeBonuses: [] };
+    if (!unit.passives || !unit.passivesActive) return mods;
+    unit.passives.forEach(pk => {
+        const p = PASSIVES[pk];
+        if (!p || !unit.passivesActive[pk]) return;
+        if (p.abilityDamageMultiplier && p.abilityDamageMultiplier[key] != null) mods.factor *= p.abilityDamageMultiplier[key];
+        if (p.damageTypeBonus && ab.damageType && p.damageTypeBonus[ab.damageType]) mods.typeBonuses.push(p.damageTypeBonus[ab.damageType]);
+    });
+    return mods;
+}
+
+// abilityOnCast: { defender: { apNextTurn: 1 } } → al usar esa habilidad,
+// +PA al arrancar el próximo turno de quien la usa (apBonusPending, como
+// Preparar). Se llama al castear habilidades sin blanco (castNoTarget).
+function applyOnCastPassives(caster, key, label) {
+    if (!caster.passives || !caster.passivesActive) return;
+    caster.passives.forEach(pk => {
+        const p = PASSIVES[pk];
+        if (!p || !caster.passivesActive[pk] || !p.abilityOnCast || !p.abilityOnCast[key]) return;
+        const fx = p.abilityOnCast[key];
+        if (fx.apNextTurn) {
+            caster.apBonusPending = (caster.apBonusPending || 0) + fx.apNextTurn;
+            addLog(`${label} gana +${fx.apNextTurn} PA para su próximo turno (${p.name}).`);
+        }
+    });
 }
 
 // Escudo: mismo criterio que la cura, floor(floor(promedio) x multiplicador).
@@ -2033,7 +2155,7 @@ function attackOptionsOf(u) {
     const opps = opponentsOf(u);
     const friends = [u, ...alliesOf(u)];
     for (const key of attackAbilitiesOf(u)) {
-        const ab = ABILITIES[key];
+        const ab = abOf(u, key);
         if (u.ap < ab.apCost) continue;
         if (ab.cooldown && u.cooldowns[key] > 0) continue;
 
@@ -2320,7 +2442,7 @@ async function runUnitAiTurn(u) {
         // el perfil agresivo por defecto), gasta el PM restante alejándose
         // lo más posible del jugador y termina el turno acá.
         if (style === "escurridizo") {
-            const attackCosts = attackAbilitiesOf(u).map(key => ABILITIES[key].apCost);
+            const attackCosts = attackAbilitiesOf(u).map(key => abOf(u, key).apCost);
             const cheapestAttackCost = attackCosts.length ? Math.min(...attackCosts) : Infinity;
             if (u.ap < cheapestAttackCost && u.move > 0) {
                 await fleeFromPlayer(u, distToPlayer, p);
@@ -2517,13 +2639,13 @@ async function runMedicPriority(u) {
 
 async function tryPlaceTrapNearPlayer(u, target = state.player) {
     const trapKey = trapAbilitiesOf(u).find(key => {
-        const ab = ABILITIES[key];
+        const ab = abOf(u, key);
         const onCooldown = ab.cooldown && u.cooldowns[key] > 0;
         return u.ap >= ab.apCost && !onCooldown;
     });
     if (!trapKey) return false;
 
-    const ab = ABILITIES[trapKey];
+    const ab = abOf(u, trapKey);
     let bestCell = -1, bestDist = Infinity;
     for (let n = 0; n < SIZE * SIZE; n++) {
         if (!state.cells[n].active) continue;
@@ -2701,7 +2823,7 @@ function renderBoard() {
 
     if (state.turn === "player" && !state.gameOver && !state.busy) {
         if (state.selection) {
-            const ab = ABILITIES[state.selection.ability];
+            const ab = abOf(state.player, state.selection.ability);
             if (ab.targetType === "area") areaPreviewRadius = ab.aoeRadius;
             for (let n = 0; n < SIZE * SIZE; n++) {
                 if (state.cells[n].active && inAbilityRange(state.player, n, ab)) targetableSet.add(n);
@@ -2822,7 +2944,7 @@ function renderCompanionCard() {
 // Arcano…) y el bonus de Comandar si está activo.
 function displayNumbers(u, key) {
     const nums = abilityNumbers(ABILITIES[key], st => effectiveStat(u, st),
-        { extraDamage: u.commandActive ? u.commandBonus : 0 });
+        { extraDamage: u.commandActive ? u.commandBonus : 0, damageMods: abilityDamageModsOf(u, key) });
     checkTextNumbers(u, key, nums);
     return nums;
 }
@@ -2861,7 +2983,7 @@ function renderHand() {
     handEl.innerHTML = "";
     const u = state.player;
     visibleAbilities(u.abilities, hiddenAbilities).forEach(key => {
-        const ab = ABILITIES[key];
+        const ab = abOf(u, key);
         const btn = document.createElement("button");
         btn.className = "card-btn" + (state.selection && state.selection.ability === key ? " selected" : "");
         btn.dataset.key = key;
@@ -3074,4 +3196,4 @@ restartBtnEl.addEventListener("click", async () => {
     }
 });
 
-newGame();
+newGame();

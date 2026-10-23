@@ -14,6 +14,8 @@
 // que battle.js); sin getStat muestra la fórmula, para almas e ítems.
 // ============================================================
 
+import { ABILITIES } from "./abilities.js";
+
 const DODGE_CAP = 85;
 const pct = x => Math.round(x * 100);
 
@@ -34,12 +36,27 @@ function avgOf(list, getStat) {
     return Math.floor(list.reduce((acc, st) => acc + getStat(st), 0) / list.length);
 }
 
+// Pasivas que cambian el daño de una habilidad (ítems especiales).
+// mods = { factor, typeBonuses } (lo arma abilityDamageModsOf en battle.js):
+//   factor: multiplica el daño (Ralentizar ×2), redondeando para abajo.
+//   typeBonuses: [{ percent, min }] → + max(min, floor(daño × percent)) cada uno.
+// battle.js usa esta misma función, así carta y combate no se separan.
+export function applyDamageMods(base, mods) {
+    if (!mods) return base;
+    let dmg = base;
+    if (mods.factor != null && mods.factor !== 1) dmg = Math.floor(dmg * mods.factor);
+    let extra = 0;
+    for (const b of mods.typeBonuses || []) extra += Math.max(b.min || 0, Math.floor(dmg * b.percent));
+    return dmg + extra;
+}
+
 // Números de la habilidad. Solo trae los campos que aplican.
 // opts.extraDamage: bonus plano al daño (Comandar activo, en combate).
+// opts.damageMods: pasivas que cambian el daño (ver applyDamageMods).
 export function abilityNumbers(ab, getStat, opts = {}) {
     const n = {};
     if (ab.damageStats) {
-        const base = Math.floor(avgOf(ab.damageStats, getStat) * (ab.damageMultiplier ?? 1));
+        const base = applyDamageMods(Math.floor(avgOf(ab.damageStats, getStat) * (ab.damageMultiplier ?? 1)), opts.damageMods);
         n.damage = Math.max(1, base + (opts.extraDamage || 0));
         if (ab.critChance) n.crit = Math.ceil(n.damage * (ab.critMultiplier ?? 1.5));
     }
@@ -354,6 +371,86 @@ export function passiveLines(pas, getStat = null, level = 1) {
             const txt = DAMAGE_TYPE_TEXT[type] ?? ` de ${type}`;
             const amount = mult === 0.5 ? "la mitad del" : `${pct(mult)}% del`;
             L.push(cap(`${when}recibe ${amount} daño${txt} (antes de reducciones)`));
+        }
+    }
+
+    // Más daño de un tipo (ej: { veneno: { percent: 0.1, min: 2 } }).
+    if (pas.damageTypeBonus) {
+        for (const [type, b] of Object.entries(pas.damageTypeBonus)) {
+            const txt = DAMAGE_TYPE_TEXT[type] ?? ` de ${type}`;
+            const minTxt = b.min ? ` (mínimo +${b.min})` : "";
+            L.push(cap(`${when}+${pct(b.percent)}% al daño${txt} que hace${minTxt}`));
+        }
+    }
+
+    // Una habilidad pega más (ej: { slow: 2 } → "Ralentizar hace el doble de daño").
+    if (pas.abilityDamageMultiplier) {
+        for (const [key, mult] of Object.entries(pas.abilityDamageMultiplier)) {
+            const name = ABILITIES[key]?.name ?? key;
+            const amount = mult === 2 ? "el doble de" : `×${mult} el`;
+            L.push(cap(`${when}${name} hace ${amount} daño`));
+        }
+    }
+
+    // Debuff al pegar con un tipo de daño (ej: Desolación, sombra).
+    if (pas.onHitDebuffByType) {
+        for (const [type, d] of Object.entries(pas.onHitDebuffByType)) {
+            const txt = DAMAGE_TYPE_TEXT[type] ?? ` de ${type}`;
+            L.push(cap(`${when}tus ataques con daño${txt} le bajan ${pct(d.percent)}% de ${listEs(d.stats)} al blanco durante su próximo turno (no se acumula)`));
+        }
+    }
+
+    // Trampas más baratas (ej: Maestro Trampero, 1 → "cuestan 1 PA menos").
+    if (pas.trapApDiscount) {
+        L.push(cap(`${when}tus trampas cuestan ${pas.trapApDiscount} PA menos (mínimo 0)`));
+    }
+
+    // Escudo al hacer daño de un tipo (ej: Consumir Fuego, Agresividad ÷ 3).
+    if (pas.onDamageTypeShield) {
+        for (const [type, cfg] of Object.entries(pas.onDamageTypeShield)) {
+            const txt = DAMAGE_TYPE_TEXT[type] ?? ` de ${type}`;
+            const amount = getStat
+                ? String(Math.floor(getStat(cfg.stat) / cfg.divisor))
+                : `${cfg.stat} ÷ ${cfg.divisor}`;
+            L.push(cap(`${when}cuando un ataque tuyo hace daño${txt}, ganás un escudo de ${amount} (una vez por ataque; no se suma, queda el más grande)`));
+        }
+    }
+
+    // Invocaciones más baratas (ej: Maestro Invocador).
+    if (pas.summonApDiscount) {
+        L.push(cap(`${when}tus invocaciones cuestan ${pas.summonApDiscount} PA menos (mínimo 0)`));
+    }
+
+    // Cambia el tipo de daño de una habilidad (ej: { hack: "electric" }).
+    if (pas.abilityDamageTypeOverride) {
+        for (const [key, type] of Object.entries(pas.abilityDamageTypeOverride)) {
+            const name = ABILITIES[key]?.name ?? key;
+            const txt = DAMAGE_TYPE_TEXT[type] ?? ` de ${type}`;
+            L.push(cap(`${when}${name} hace daño${txt}`));
+        }
+    }
+
+    // Alcance extra para una habilidad (ej: { disparo: 1 }).
+    if (pas.abilityRangeBonus) {
+        for (const [key, bonus] of Object.entries(pas.abilityRangeBonus)) {
+            const ab = ABILITIES[key];
+            const name = ab?.name ?? key;
+            const txt = ab ? `alcance ${ab.range + bonus}` : `+${bonus} de alcance`;
+            L.push(cap(`${when}${name} tiene ${txt}`));
+        }
+    }
+
+    // Vida extra para las invocaciones (ej: Fuerza de las Arenas, "Armadura").
+    if (pas.summonBonusHpStat) {
+        const amount = getStat ? String(Math.max(0, Math.floor(getStat(pas.summonBonusHpStat)))) : `tu ${pas.summonBonusHpStat}`;
+        L.push(cap(`${when}tus invocaciones salen con ${amount} de vida máxima extra`));
+    }
+
+    // Efecto extra al usar una habilidad (ej: { defender: { apNextTurn: 1 } }).
+    if (pas.abilityOnCast) {
+        for (const [key, fx] of Object.entries(pas.abilityOnCast)) {
+            const name = ABILITIES[key]?.name ?? key;
+            if (fx.apNextTurn) L.push(cap(`${when}al usar ${name}, +${fx.apNextTurn} PA en el próximo turno`));
         }
     }
 

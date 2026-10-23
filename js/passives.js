@@ -117,4 +117,97 @@ export const PASSIVES = {
         damageTakenMultiplier: 0.85,
     },
 
+    // ---------- Ítems especiales (22/10/2026) ----------
+    // Siempre activas (hpThreshold 1). Ver abilityDamageModsOf y
+    // applyOnCastPassives en battle.js; los textos, en ability-text.js.
+
+    // Arma y Escudo de Hueso: al usar Defender, +1 PA en el próximo turno.
+    boneGuard: {
+        name: "Guardia de Hueso",
+        hpThreshold: 1,
+        abilityOnCast: { defender: { apNextTurn: 1 } },
+    },
+    // Brazales del Envenenador: +10% al daño de veneno, mínimo +2.
+    // Se suma DESPUÉS del ×2 de Ralentizar Tribal (si están las dos).
+    poisonMastery: {
+        name: "Maestría del Veneno",
+        hpThreshold: 1,
+        damageTypeBonus: { veneno: { percent: 0.1, min: 2 } },
+    },
+    // Foco Tribal: Ralentizar hace el doble de daño.
+    tribalSlow: {
+        name: "Ralentizar Tribal",
+        hpThreshold: 1,
+        abilityDamageMultiplier: { slow: 2 },
+    },
+
+    // ---------- Ítems especiales, nivel 3 (22/10/2026) ----------
+    // Casco del Trampero: las trampas cuestan 1 PA menos (mínimo 0) y
+    // mantienen su CD. Ver abOf en battle.js.
+    trapMaster: {
+        name: "Maestro Trampero",
+        hpThreshold: 1,
+        trapApDiscount: 1,
+    },
+    // Amuleto de Escorpión: tus invocaciones salen con tu Armadura como
+    // vida máxima extra. Ver summonBonusHpOf en battle.js.
+    sandStrength: {
+        name: "Fuerza de las Arenas",
+        hpThreshold: 1,
+        summonBonusHpStat: "Armadura",
+    },
+    // Arma y Escudo Nier: +1 PA en todos los turnos (como Revoloteo con PM).
+    waterBlessing: {
+        name: "Bendición del Agua",
+        hpThreshold: 1,
+        resourceBoosts: { ap: 1 },
+    },
+    // Arco Nier: Disparo con +1 de alcance (2 → 3). Ver abOf en battle.js.
+    sureShot: {
+        name: "Tiro Certero",
+        hpThreshold: 1,
+        abilityRangeBonus: { disparo: 1 },
+    },
+    // Báculo de la Saga: Maldición hace el doble de daño.
+    curseBoost: {
+        name: "Maldición Potente",
+        hpThreshold: 1,
+        abilityDamageMultiplier: { curse: 2 },
+    },
+    // Pixie Vest: tus ataques de sombra (daño real) le bajan 25% de Arma
+    // Melee, Foco Mágico y Arma Distancia al blanco durante su próximo
+    // turno. No se acumula. Ver applyTypeDebuffPassives en battle.js.
+    desolation: {
+        name: "Desolación",
+        hpThreshold: 1,
+        onHitDebuffByType: { oscuro: { stats: ["Arma Melee", "Foco Magico", "Arma Distancia"], percent: 0.25, turns: 1 } },
+    },
+
+    // ---------- Ítems especiales, nivel 4 (23/10/2026) ----------
+    // Chaleco del Cazador: las invocaciones cuestan 1 PA menos (mínimo 0).
+    // Ver abOf en battle.js.
+    summonMaster: {
+        name: "Maestro Invocador",
+        hpThreshold: 1,
+        summonApDiscount: 1,
+    },
+    // Perneras del Cazatormentas: Hachazo hace daño eléctrico y todo el daño
+    // eléctrico sube 15% (mínimo +2), Hachazo incluido.
+    lightningBlessed: {
+        name: "Bendito por el Rayo",
+        hpThreshold: 1,
+        abilityDamageTypeOverride: { hack: "electric" },
+        damageTypeBonus: { electric: { percent: 0.15, min: 2 } },
+    },
+
+    // ---------- Ítems especiales, nivel 5 (23/10/2026) ----------
+    // Casco de Baal: cuando un ataque tuyo hace daño de fuego, ganás escudo
+    // = floor(Agresividad ÷ 3). Una vez por ataque, no se suma (queda el
+    // más grande), sin mínimo. Ver applyDamageTypeShieldPassives en battle.js.
+    consumeFire: {
+        name: "Consumir Fuego",
+        hpThreshold: 1,
+        onDamageTypeShield: { fuego: { stat: "Agresividad", divisor: 3 } },
+    },
+
 };

@@ -341,7 +341,7 @@ export const ABILITIES = {
         name: "Maldición", range: 3, apCost: 1, cooldown: 1, needsTarget: true, targetType: "enemy",
         damageStats: ["Concentración", "Sabiduría", "Carisma", "Agresividad", "Foco Magico"],
         damageMultiplier: 0.35,
-        damageType: "magic",
+        damageType: "oscuro",
         fx: { projectile: "none" },
         // Maldición: si el golpe hace daño de verdad (dmg > 0), cada stat de
         // debuffStats del blanco baja en ese mismo dmg, hasta el final del
@@ -1031,5 +1031,13 @@ export const ABILITIES = {
         name: "Preparar", range: 0, apCost: 1, cooldown: 1, needsTarget: false,
         apNextTurn: 1,
         desc: "Guardás 1 PA para tu próximo turno · CD 1"
+    },
+
+    // Amuleto de Escorpión (ítem especial, Cristal de Arena).
+    summonScorpion: {
+        name: "Invocar Escorpión", range: 0, apCost: 3, cooldown: 4, needsTarget: false,
+        summon: "scorpion",
+        summonLabel: "Scorpion",
+        desc: "Invoca un Scorpion a tu lado · CD 4"
     },
 };
