@@ -252,3 +252,94 @@
     .taberna-list { grid-template-columns: 1fr; }
     .ciudad-header-right .ciudad-nav-btn--ghost { padding: 7px 9px; }
 }
+
+/* ---------- Ventana de contratar (29/10/2026) ---------- */
+.taberna-modal-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 30;
+    background: rgba(10, 11, 14, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+}
+
+.taberna-modal {
+    width: 100%;
+    max-width: 520px;
+    max-height: calc(100vh - 32px);
+    overflow-y: auto;
+    background: var(--panel);
+    border: 1px solid #2c313b;
+    border-radius: 8px;
+    padding: 16px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5);
+}
+
+.taberna-abilities {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.taberna-ability {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 7px 10px;
+    border: 1px solid #2c313b;
+    border-radius: 6px;
+    background: #0f1115;
+    cursor: pointer;
+}
+
+.taberna-ability input {
+    width: 16px;
+    height: 16px;
+    accent-color: var(--teal);
+    flex-shrink: 0;
+}
+
+.taberna-ability:has(input:not(:checked)) {
+    opacity: 0.5;
+}
+
+.taberna-ability-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.taberna-ability-name {
+    font-family: var(--sans);
+    font-size: 13px;
+    color: var(--text);
+}
+
+.taberna-ability-line {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-dim);
+}
+
+.taberna-modal-footer {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 4px;
+}
+
+.taberna-modal-footer .taberna-price {
+    margin-right: auto;
+}
+
+.taberna-style input:disabled + span {
+    opacity: 0.4;
+}

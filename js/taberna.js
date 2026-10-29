@@ -9,6 +9,7 @@ import { supabaseFetch } from "./httpClient.js";
 import { ABILITIES } from "./abilities.js";
 import { PASSIVES } from "./passives.js";
 import { ICON_COINS } from "./icons.js";
+import { abilityNumbers, shortLine } from "./ability-text.js";
 
 requireSession();
 
@@ -129,6 +130,8 @@ function renderCurrent() {
     info.appendChild(el("div", "taberna-meta", `Nivel ${s.level} · ${style?.name || c.style} · ${hp}`));
     head.appendChild(info);
     card.appendChild(head);
+    const off = (s.disabled_abilities || []).filter(k => ABILITIES[k]);
+    if (off.length) card.appendChild(el("div", "taberna-hint", `Habilidades apagadas: ${off.map(k => ABILITIES[k].name).join(", ")}`));
     box.appendChild(card);
 }
 
@@ -183,38 +186,11 @@ function offerCard(o) {
     // Si ya contrataste, la tarjeta queda solo para mirar.
     if (data.companion) return card;
 
-    // Estilo de juego
-    const allowed = stylesFor(abs);
-    const sec = el("div");
-    sec.appendChild(el("div", "taberna-section-title", "Estilo de juego"));
-    const group = el("div", "taberna-styles");
-    group.setAttribute("role", "radiogroup");
-    const desc = el("div", "taberna-style-desc");
-    const firstOk = STYLES.find(s => allowed[s.key]);
-    STYLES.forEach(s => {
-        const label = el("label", "taberna-style");
-        const input = document.createElement("input");
-        input.type = "radio";
-        input.name = `style-${o.id}`;
-        input.value = s.key;
-        input.disabled = !allowed[s.key];
-        if (s === firstOk) input.checked = true;
-        input.addEventListener("change", () => { desc.textContent = s.desc; });
-        label.appendChild(input);
-        label.appendChild(el("span", null, s.name));
-        if (!allowed[s.key]) label.title = "No tiene habilidades para este estilo";
-        group.appendChild(label);
-    });
-    desc.textContent = firstOk?.desc || "";
-    sec.appendChild(group);
-    sec.appendChild(desc);
-    card.appendChild(sec);
-
-    // Contratar
+    // Contratar: abre la ventana para elegir estilo y apagar habilidades.
     let reason = "";
     if (!o.available) reason = "Ya no está disponible.";
     else if (data.run_in_progress) reason = "Ya empezaste la corrida.";
-    else if (!firstOk) reason = "No tiene habilidades para pelear.";
+    else if (!STYLES.some(st => stylesFor(abs)[st.key])) reason = "No tiene habilidades para pelear.";
     else if ((data.gold ?? 0) < o.price) reason = `Te faltan ${o.price - (data.gold ?? 0)} de oro.`;
 
     const footer = el("div", "taberna-offer-footer");
@@ -222,22 +198,143 @@ function offerCard(o) {
     const btn = el("button", "ciudad-event-buy-btn", "Contratar");
     btn.type = "button";
     btn.disabled = !!reason;
-    btn.addEventListener("click", () => {
-        const style = group.querySelector("input:checked")?.value;
-        if (style) hire(o, style, btn);
-    });
+    btn.addEventListener("click", () => openHireDialog(o));
     footer.appendChild(btn);
     card.appendChild(footer);
     return card;
 }
 
-async function hire(o, style, btn) {
-    const styleName = STYLES.find(s => s.key === style)?.name || style;
-    const ok = confirm(`¿Contratar a ${o.name} (${styleName}) por ${o.price} de oro? Te acompaña durante tu próxima corrida.`);
-    if (!ok) return;
+// ---------- Ventana de contratar ----------
+// Elegís el estilo de juego y qué habilidades NO querés que use (todas
+// arrancan prendidas). Los estilos se habilitan según las habilidades que
+// queden prendidas (stylesFor): si apagás la cura, Médico se deshabilita.
+function openHireDialog(o) {
+    closeHireDialog();
+    const abs = (o.abilities || []).filter(k => ABILITIES[k]);
+    const enabled = new Set(abs);
+    const getStat = st => (o.stats || {})[st] || 0;
+    let style = null;
+
+    const overlay = el("div", "taberna-modal-overlay");
+    overlay.id = "hireDialog";
+    const dlg = el("div", "taberna-modal");
+    dlg.setAttribute("role", "dialog");
+    dlg.setAttribute("aria-modal", "true");
+    overlay.appendChild(dlg);
+
+    const head = el("div", "taberna-offer-head");
+    head.appendChild(portrait(o.icon, o.name));
+    const info = el("div");
+    info.appendChild(el("div", "taberna-name", `Contratar a ${o.name}`));
+    info.appendChild(el("div", "taberna-meta", `Nivel ${o.level} · ${o.max_hp} de vida`));
+    head.appendChild(info);
+    dlg.appendChild(head);
+
+    // Estilo
+    dlg.appendChild(el("div", "taberna-section-title", "Estilo de juego"));
+    const group = el("div", "taberna-styles");
+    group.setAttribute("role", "radiogroup");
+    const desc = el("div", "taberna-style-desc");
+    const inputs = {};
+    STYLES.forEach(st => {
+        const label = el("label", "taberna-style");
+        const input = document.createElement("input");
+        input.type = "radio";
+        input.name = "hire-style";
+        input.value = st.key;
+        input.addEventListener("change", () => { style = st.key; desc.textContent = st.desc; refresh(); });
+        label.appendChild(input);
+        label.appendChild(el("span", null, st.name));
+        group.appendChild(label);
+        inputs[st.key] = { input, label };
+    });
+    dlg.appendChild(group);
+    dlg.appendChild(desc);
+
+    // Habilidades
+    dlg.appendChild(el("div", "taberna-section-title", "Habilidades"));
+    dlg.appendChild(el("div", "taberna-hint", "Apagá las que no quieras que use. Si la apagás, no la usa en toda la corrida."));
+    const list = el("div", "taberna-abilities");
+    abs.forEach(k => {
+        const ab = ABILITIES[k];
+        const row = el("label", "taberna-ability");
+        const cb = document.createElement("input");
+        cb.type = "checkbox";
+        cb.checked = true;
+        cb.addEventListener("change", () => { cb.checked ? enabled.add(k) : enabled.delete(k); refresh(); });
+        const text = el("span", "taberna-ability-text");
+        text.appendChild(el("span", "taberna-ability-name", ab.name));
+        text.appendChild(el("span", "taberna-ability-line", shortLine(ab, abilityNumbers(ab, getStat))));
+        row.appendChild(cb);
+        row.appendChild(text);
+        list.appendChild(row);
+    });
+    dlg.appendChild(list);
+
+    const pas = (o.passives || []).filter(k => PASSIVES[k]);
+    if (pas.length) {
+        dlg.appendChild(el("div", "taberna-section-title", "Pasivas"));
+        dlg.appendChild(chips(pas, PASSIVES, "taberna-chip taberna-chip--passive"));
+    }
+
+    // Pie: aviso, precio y botones
+    const warn = el("div", "taberna-reason");
+    const foot = el("div", "taberna-modal-footer");
+    const price = el("div", "taberna-price");
+    price.innerHTML = `${o.price} ${ICON_COINS}`;
+    const cancel = el("button", "ciudad-nav-btn ciudad-nav-btn--ghost", "Cancelar");
+    cancel.type = "button";
+    cancel.addEventListener("click", closeHireDialog);
+    const confirmBtn = el("button", "ciudad-event-buy-btn", "Confirmar contratación");
+    confirmBtn.type = "button";
+    confirmBtn.addEventListener("click", () => hire(o, style, [...abs].filter(k => !enabled.has(k)), confirmBtn));
+    foot.appendChild(price);
+    foot.appendChild(cancel);
+    foot.appendChild(confirmBtn);
+    dlg.appendChild(warn);
+    dlg.appendChild(foot);
+
+    // Estilos posibles con las habilidades que quedan prendidas.
+    function refresh() {
+        const allowed = stylesFor([...enabled]);
+        STYLES.forEach(st => {
+            const { input, label } = inputs[st.key];
+            input.disabled = !allowed[st.key];
+            label.title = allowed[st.key] ? "" : "Con las habilidades prendidas no puede jugar así";
+        });
+        if (!style || !allowed[style]) {
+            const first = STYLES.find(st => allowed[st.key]);
+            style = first?.key || null;
+            if (first) inputs[first.key].input.checked = true;
+            else STYLES.forEach(st => { inputs[st.key].input.checked = false; });
+            desc.textContent = first?.desc || "";
+        }
+        warn.textContent = style ? "" : "Con las habilidades prendidas no puede usar ningún estilo.";
+        confirmBtn.disabled = !style;
+    }
+    refresh();
+
+    overlay.addEventListener("click", e => { if (e.target === overlay) closeHireDialog(); });
+    document.addEventListener("keydown", escClose);
+    document.body.appendChild(overlay);
+    confirmBtn.focus();
+}
+
+function escClose(e) {
+    if (e.key === "Escape") closeHireDialog();
+}
+
+function closeHireDialog() {
+    document.getElementById("hireDialog")?.remove();
+    document.removeEventListener("keydown", escClose);
+}
+
+async function hire(o, style, disabledAbilities, btn) {
+    if (!style) return;
     btn.disabled = true;
     try {
-        const res = await tavern("hire", { companion_id: o.id, style });
+        const res = await tavern("hire", { companion_id: o.id, style, disabled_abilities: disabledAbilities });
+        closeHireDialog();
         data.companion = res.companion;
         data.gold = res.gold;
         renderGold();
